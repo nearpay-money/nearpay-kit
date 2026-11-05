@@ -15,4 +15,18 @@ export {
   USDC_BASE,
   USDC_NEAR,
 } from "./factories.js";
+export {
+  type CallBody,
+  type CallParams,
+  type CallQuery,
+  type CallResponse,
+  type MockCall,
+  type MockHandler,
+  type MockPeer,
+  type MockPeerOptions,
+  mintServiceToken,
+  mockError,
+  mockPeer,
+  testServiceToken,
+} from "./peer.js";
 export { mintTestToken, testKeySource, testSigningKey } from "./tokens.js";

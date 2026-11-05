@@ -1,6 +1,6 @@
 {
   "name": "@nearpay-internal/bus",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "NATS JetStream: connect, streams, durable consumers with backoff and dead letters, publish with de-duplication.",
   "license": "Apache-2.0",
   "type": "module",
@@ -24,7 +24,7 @@
     "build": "node ../../scripts/build-package.mjs"
   },
   "dependencies": {
-    "@nearpay-internal/spec": "0.1.0",
+    "@nearpay-internal/spec": "0.1.1",
     "@nats-io/jetstream": "3.4.0",
     "@nats-io/transport-node": "3.4.0"
   },
@@ -33,7 +33,6 @@
   },
   "devDependencies": {
     "zod": "4.6.7",
-    "@nearpay-internal/ids": "workspace:*",
-    "@nearpay-internal/testing": "workspace:*"
+    "@nearpay-internal/ids": "workspace:*"
   }
 }

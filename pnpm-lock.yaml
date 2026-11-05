@@ -36,15 +36,15 @@ importers:
   packages/auth:
     dependencies:
       '@nearpay/spec':
-        specifier: 0.1.0
-        version: 0.1.0(zod@4.6.7)
+        specifier: 0.1.1
+        version: 0.1.1(zod@4.6.7)
       jose:
         specifier: 6.2.15
         version: 6.2.15
     devDependencies:
       '@nearpay-internal/spec':
-        specifier: 0.1.0
-        version: 0.1.0(zod@4.6.7)
+        specifier: 0.1.1
+        version: 0.1.1(zod@4.6.7)
       zod:
         specifier: 4.6.7
         version: 4.6.7
@@ -58,15 +58,12 @@ importers:
         specifier: 3.4.0
         version: 3.4.0
       '@nearpay-internal/spec':
-        specifier: 0.1.0
-        version: 0.1.0(zod@4.6.7)
+        specifier: 0.1.1
+        version: 0.1.1(zod@4.6.7)
     devDependencies:
       '@nearpay-internal/ids':
         specifier: workspace:*
         version: link:../ids
-      '@nearpay-internal/testing':
-        specifier: workspace:*
-        version: link:../testing
       zod:
         specifier: 4.6.7
         version: 4.6.7
@@ -86,8 +83,8 @@ importers:
         specifier: workspace:*
         version: link:../ids
       '@nearpay-internal/spec':
-        specifier: 0.1.0
-        version: 0.1.0(zod@4.6.7)
+        specifier: 0.1.1
+        version: 0.1.1(zod@4.6.7)
       '@types/pg':
         specifier: 8.23.1
         version: 8.23.1
@@ -98,9 +95,6 @@ importers:
         specifier: 8.23.1
         version: 8.23.1
     devDependencies:
-      '@nearpay-internal/testing':
-        specifier: workspace:*
-        version: link:../testing
       zod:
         specifier: 4.6.7
         version: 4.6.7
@@ -108,8 +102,8 @@ importers:
   packages/http:
     dependencies:
       '@nearpay/spec':
-        specifier: 0.1.0
-        version: 0.1.0(zod@4.6.7)
+        specifier: 0.1.1
+        version: 0.1.1(zod@4.6.7)
     devDependencies:
       zod:
         specifier: 4.6.7
@@ -118,8 +112,8 @@ importers:
   packages/ids:
     dependencies:
       '@nearpay/spec':
-        specifier: 0.1.0
-        version: 0.1.0(zod@4.6.7)
+        specifier: 0.1.1
+        version: 0.1.1(zod@4.6.7)
     devDependencies:
       zod:
         specifier: 4.6.7
@@ -134,8 +128,8 @@ importers:
         specifier: 2.5.1
         version: 2.5.1(@near-js/crypto@2.5.1(@near-js/types@2.5.1)(@near-js/utils@2.5.1(@near-js/types@2.5.1)))(@near-js/types@2.5.1)(@near-js/utils@2.5.1(@near-js/types@2.5.1))
       '@nearpay/spec':
-        specifier: 0.1.0
-        version: 0.1.0(zod@4.6.7)
+        specifier: 0.1.1
+        version: 0.1.1(zod@4.6.7)
       '@noble/curves':
         specifier: 2.4.0
         version: 2.4.0
@@ -164,8 +158,8 @@ importers:
         specifier: workspace:*
         version: link:../ids
       '@nearpay/spec':
-        specifier: 0.1.0
-        version: 0.1.0(zod@4.6.7)
+        specifier: 0.1.1
+        version: 0.1.1(zod@4.6.7)
       '@opentelemetry/api':
         specifier: 1.9.1
         version: 1.9.1
@@ -188,15 +182,9 @@ importers:
         specifier: 15.1.3
         version: 15.1.3
     devDependencies:
-      '@nearpay-internal/db':
-        specifier: workspace:*
-        version: link:../db
       '@nearpay-internal/spec':
-        specifier: 0.1.0
-        version: 0.1.0(zod@4.6.7)
-      '@nearpay-internal/testing':
-        specifier: workspace:*
-        version: link:../testing
+        specifier: 0.1.1
+        version: 0.1.1(zod@4.6.7)
       zod:
         specifier: 4.6.7
         version: 4.6.7
@@ -212,12 +200,15 @@ importers:
       '@nearpay-internal/ids':
         specifier: workspace:*
         version: link:../ids
+      '@nearpay-internal/service':
+        specifier: workspace:*
+        version: link:../service
       '@nearpay-internal/spec':
-        specifier: 0.1.0
-        version: 0.1.0(zod@4.6.7)
+        specifier: 0.1.1
+        version: 0.1.1(zod@4.6.7)
       '@nearpay/spec':
-        specifier: 0.1.0
-        version: 0.1.0(zod@4.6.7)
+        specifier: 0.1.1
+        version: 0.1.1(zod@4.6.7)
       testcontainers:
         specifier: 11.14.0
         version: 11.14.0(bare-buffer@3.7.1)
@@ -721,14 +712,14 @@ packages:
     peerDependencies:
       '@near-js/types': ^2.0.1
 
-  '@nearpay-internal/spec@0.1.0':
-    resolution: {integrity: sha512-kW7rzXaDd876eK76dbYU49xGJk044naJkGF2KVjq6PtkqX6HeUM/j8BEYWQM5/ff4xSSm4KACYfJD6lXxS/jTw==}
+  '@nearpay-internal/spec@0.1.1':
+    resolution: {integrity: sha512-phalwh/rQpf8j+lVdbRHrrG3HyQgLPZ1EOL5tKOTmC9p8E5pbmnWaWkMQ18D54IvY0eTYaa84vhVDh60Y4CJjw==}
     engines: {node: '>=22.11.0'}
     peerDependencies:
       zod: ^4.6.7
 
-  '@nearpay/spec@0.1.0':
-    resolution: {integrity: sha512-ZG+p/dbkhZ1sBz2nF4N1X/T0zAU3nRgZ8wRfRIjER3+/kV5OwN521avFZJZ/sglf/0/OmQT6ynGTfDPv+ha5Fg==}
+  '@nearpay/spec@0.1.1':
+    resolution: {integrity: sha512-EhuL0GCABXQOKFVpv9AbEx3bUjjTe92777FF2Vmu1RolVX0ygTLd3hzZyrYWEJnXSNvajdkbD9EfzDV+dPBEPA==}
     engines: {node: '>=22.11.0'}
     peerDependencies:
       zod: ^4.6.7
@@ -2392,12 +2383,12 @@ snapshots:
       depd: 2.0.0
       mustache: 4.0.0
 
-  '@nearpay-internal/spec@0.1.0(zod@4.6.7)':
+  '@nearpay-internal/spec@0.1.1(zod@4.6.7)':
     dependencies:
-      '@nearpay/spec': 0.1.0(zod@4.6.7)
+      '@nearpay/spec': 0.1.1(zod@4.6.7)
       zod: 4.6.7
 
-  '@nearpay/spec@0.1.0(zod@4.6.7)':
+  '@nearpay/spec@0.1.1(zod@4.6.7)':
     dependencies:
       zod: 4.6.7
 

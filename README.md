@@ -58,6 +58,8 @@ Each package has its own README with its public surface. Contracts (`@nearpay/sp
 
 ## Status
 
+`0.1.1` — Stage 1 (step 1.2): spec-driven peer mocks in `testing` (`mockPeer`, service-token helpers); see `CHANGELOG.md`.
+
 `0.1.0` — Stage 1 (step 1.1): all ten packages. Unit tests cover the pure code; integration tests run the database, bus and service packages against real Postgres and NATS containers with the stack's pinned images.
 
 ## Built with
