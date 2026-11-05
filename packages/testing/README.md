@@ -2,7 +2,7 @@
 
 Test utilities: Testcontainers fixtures with the stack's pinned images, a fake clock, spec-validated factories for every Stage-1 aggregate, event probes, test tokens and spec-driven peer mocks.
 
-- `startPostgres`, `startNats`, `startValkey`, `IMAGES`
+- `startPostgres`, `startNats`, `startValkey`, `IMAGES`; `provisionServiceDatabase(adminUrl, service)` (migrator/app roles like `postgres-init`)
 - `account`, `settlementDestination`, `internalSettlementDestination`, `paymentIntent`, `checkoutSession`, `balanceTransaction`, `execution`, `agentPayment`, `domainEvent`
 - `eventProbe(natsUrl)`, `expectEvent(probe, subject, matcher)`
 - `mintTestToken`, `testKeySource`, `testSigningKey`; `fakeClock`

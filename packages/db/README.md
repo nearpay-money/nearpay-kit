@@ -7,6 +7,7 @@ Postgres helpers on Kysely + pg: exact numeric types, transactions with retry, m
 - Outbox: `emit(tx, event)` (spec-validated), `startOutboxRelay`, `relayOnce`, `outboxLagSeconds`; inbox `consume(tx, eventId)`
 - `withIdempotency`, `idempotencyStore(db, cipher)` (for `@nearpay-internal/service`), `requestHash`
 - Jobs: `enqueueJob`, `startJobWorker`, `runDueJobs`, `jobsDue`; `advisoryLeader`; `createEnvelopeCipher`, `loadKek`; `purgeKitTables`, `recordDeadLetter`, `deadLettersOpen`
+- Consumers and background tasks: `inboxHandler(db, fn)`, `deadLetterSink`, `outboxRelayTask`, `jobWorkerTask`, `leaderTask`, `recurringJobsTask` (hourly/daily jobs, one per slot)
 - Re-exports `sql`, `Kysely` and its table types so services use the kit's copy
 
 Design: `nearpay-brain/lld/00-foundations.md` (foundations §7). Part of `nearpay-kit`; no domain rules (ADR-0001).

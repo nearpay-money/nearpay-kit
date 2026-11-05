@@ -48,4 +48,15 @@ export {
   startOutboxRelay,
 } from "./outbox.js";
 export { KIT_MIGRATIONS, type KitTables } from "./tables.js";
+export {
+  deadLetterSink,
+  inboxHandler,
+  jobWorkerTask,
+  leaderTask,
+  outboxRelayTask,
+  type RecurringJob,
+  recurringJobsTask,
+  recurringSlot,
+  type Task,
+} from "./tasks.js";
 export { type Isolation, withTx } from "./tx.js";

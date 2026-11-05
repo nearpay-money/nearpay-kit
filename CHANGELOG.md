@@ -3,6 +3,20 @@
 All packages in this repository share one version. Breaking changes bump the major version and
 carry a migration note here (semver, foundations §4).
 
+## 0.1.2 — Stage 1, step 1.2
+
+Additive (no migration needed):
+
+- `@nearpay-internal/db`: `inboxHandler(db, fn)` (inbox dedupe + apply in one transaction, foundations
+  §8), `deadLetterSink(db, source)`, background tasks `outboxRelayTask`, `jobWorkerTask`, `leaderTask`
+  and `recurringJobsTask` (leader-elected enqueue of hourly/daily jobs, one job per slot via the dedupe
+  key) with `recurringSlot`.
+- `@nearpay-internal/bus`: `startDomainConsumers` / `domainConsumersTask` (one durable per producing
+  stream, filters from the handlers, refuses subjects the catalogue does not route to the service),
+  `unhandledSubjects` for contract tests, `durablesOf` for consumer-lag metrics.
+- `@nearpay-internal/testing`: `provisionServiceDatabase(adminUrl, service)` creates migrator/app roles
+  exactly like `nearpay-deploy`'s `postgres-init` (`pg` is now a dependency).
+
 ## 0.1.1 — Stage 1, step 1.2
 
 Additive (no migration needed):

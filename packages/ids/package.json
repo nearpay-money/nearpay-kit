@@ -1,6 +1,6 @@
 {
   "name": "@nearpay-internal/ids",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Prefixed UUIDv7 ids (TypeID encoding): newId, toUuid, fromUuid, isId.",
   "license": "Apache-2.0",
   "type": "module",

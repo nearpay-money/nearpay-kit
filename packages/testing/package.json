@@ -1,6 +1,6 @@
 {
   "name": "@nearpay-internal/testing",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Test utilities: Testcontainers fixtures (Postgres, NATS, Valkey), fake clock, aggregate factories, event expectations, test tokens, spec-driven peer mocks.",
   "license": "Apache-2.0",
   "type": "module",
@@ -30,14 +30,14 @@
     "@nearpay-internal/auth": "workspace:*",
     "testcontainers": "11.14.0",
     "@nats-io/transport-node": "3.4.0",
-    "@nearpay-internal/service": "workspace:*"
+    "@nearpay-internal/service": "workspace:*",
+    "pg": "8.23.1",
+    "@types/pg": "8.23.1"
   },
   "peerDependencies": {
     "zod": "^4.6.7"
   },
   "devDependencies": {
-    "zod": "4.6.7",
-    "pg": "8.23.1",
-    "@types/pg": "8.23.1"
+    "zod": "4.6.7"
   }
 }
