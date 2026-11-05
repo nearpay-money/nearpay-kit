@@ -1,0 +1,27 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "types": ["node"],
+    "paths": {
+      "@nearpay-internal/ids": ["./packages/ids/src/index.ts"],
+      "@nearpay-internal/money": ["./packages/money/src/index.ts"],
+      "@nearpay-internal/chains": ["./packages/chains/src/index.ts"],
+      "@nearpay-internal/intents": ["./packages/intents/src/index.ts"],
+      "@nearpay-internal/db": ["./packages/db/src/index.ts"],
+      "@nearpay-internal/bus": ["./packages/bus/src/index.ts"],
+      "@nearpay-internal/auth": ["./packages/auth/src/index.ts"],
+      "@nearpay-internal/http": ["./packages/http/src/index.ts"],
+      "@nearpay-internal/service": ["./packages/service/src/index.ts"],
+      "@nearpay-internal/testing": ["./packages/testing/src/index.ts"]
+    }
+  },
+  "include": [
+    "packages/*/src",
+    "packages/*/test",
+    "scripts",
+    "vitest.workspace.ts",
+    "vitest.shared.ts",
+    "vitest.config.ts"
+  ]
+}

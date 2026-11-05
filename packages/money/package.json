@@ -1,0 +1,27 @@
+{
+  "name": "@nearpay-internal/money",
+  "version": "0.1.0",
+  "description": "Integer money: bigint amounts, unit parsing/formatting, exact rational arithmetic, bps and rounding helpers.",
+  "license": "Apache-2.0",
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=22.11.0"
+  },
+  "scripts": {
+    "build": "node ../../scripts/build-package.mjs"
+  },
+  "dependencies": {}
+}

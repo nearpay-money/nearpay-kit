@@ -1,0 +1,65 @@
+/** @nearpay-internal/service — service bootstrap (lld/00-foundations.md §4, §9–§15). */
+export {
+  BaseConfig,
+  baseConfigShape,
+  ConfigError,
+  envName,
+  flag,
+  int,
+  LOG_LEVELS,
+  type LoadConfigOptions,
+  list,
+  loadConfig,
+  port,
+  secret,
+  url,
+} from "./config.js";
+export {
+  ApiError,
+  type ApiErrorOptions,
+  fromZodError,
+  type MappedError,
+  paramName,
+  toErrorResponse,
+} from "./errors.js";
+export { createLogger, type Logger, type LoggerOptions, REDACT_PATHS } from "./logger.js";
+export { type ProcessFactory, type RunMainOptions, type Runnable, runMain } from "./main.js";
+export { createMetrics, type ExternalCallResult, type ServiceMetrics, serveMetrics } from "./metrics.js";
+export { parseQuery } from "./query.js";
+export {
+  type BackgroundTask,
+  type BindingOptions,
+  createService,
+  type Handler,
+  type IdempotencyScope,
+  type IdempotencyStore,
+  implement,
+  type ReadinessCheck,
+  type ReadyReport,
+  type RequestContext,
+  type Responded,
+  type RouteBinding,
+  type RouteBodyOut,
+  type RouteEvents,
+  type RouteHeadersOut,
+  respond,
+  type Service,
+  type ServiceApp,
+  type ServiceOptions,
+  unimplementedRoutes,
+} from "./service.js";
+export { openSse, type SseStream } from "./sse.js";
+export {
+  formatTraceparent,
+  parseTraceparent,
+  type Span,
+  SpanKind,
+  type SpanOptions,
+  SpanStatusCode,
+  startSpan,
+  startTracing,
+  type Tracer,
+  type Tracing,
+  type TracingOptions,
+  withSpan,
+} from "./tracing.js";

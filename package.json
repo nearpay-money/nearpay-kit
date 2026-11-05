@@ -1,0 +1,42 @@
+{
+  "name": "nearpay-kit",
+  "private": true,
+  "version": "0.1.0",
+  "description": "NearPay shared runtime libraries (@nearpay-internal/*).",
+  "license": "Apache-2.0",
+  "type": "module",
+  "packageManager": "pnpm@9.15.9",
+  "engines": {
+    "node": ">=22.11.0 <23"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "biome check .",
+    "format": "biome format --write .",
+    "test": "vitest run --project unit",
+    "test:integration": "vitest run --project integration",
+    "test:all": "vitest run",
+    "coverage": "vitest run --project unit --coverage",
+    "build": "pnpm -r --filter \"./packages/*\" run build",
+    "verify": "pnpm typecheck && pnpm lint && pnpm test:all && pnpm build",
+    "release:local": "node scripts/release-local.mjs"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild",
+      "cpu-features",
+      "ssh2",
+      "protobufjs"
+    ]
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.6.5",
+    "@types/node": "22.20.5",
+    "@vitest/coverage-v8": "2.1.9",
+    "fast-check": "4.10.2",
+    "typescript": "5.9.3",
+    "tsx": "4.23.15",
+    "vitest": "2.1.9",
+    "zod": "4.6.7"
+  }
+}
