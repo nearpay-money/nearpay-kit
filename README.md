@@ -9,12 +9,15 @@
 | Ships as | npm (private): @nearpay-internal/{money,ids,service,db,auth,intents,chains,testing} |
 | Owns | Cross-cutting runtime code (no domain logic) |
 | Depends on (published artifacts only) | nearpay-spec |
-| Roadmap phase | P0 Foundations |
+| First built in | Stage 1 (step 1.1) |
 
 ## Documentation
 
 This repo stays surgical: design docs live in [`nearpay-brain`](../nearpay-brain/README.md), not here.
 
+- `nearpay-brain/lld/00-foundations.md` — **low-level design (dev-ready; implement from this)**
+- `nearpay-brain/lld/audits/00-foundations.md` — audit findings already folded into the LLD
+- `nearpay-brain/roadmap/development-plan.md` — stage and step this repo is built in
 - `nearpay-brain/architecture/hld.md` — system design
 - `nearpay-brain/architecture/repositories.md` — repo topology and dependency rules
 - `nearpay-brain/decisions/ADR-0004-postgres-outbox-nats.md`
@@ -39,4 +42,8 @@ nearpay-kit/
 
 ## Status
 
-Scaffold only. Implementation starts in phase **P0 Foundations** (`nearpay-brain/roadmap/roadmap.md`).
+Scaffold only. Implementation starts in **Stage 1 (step 1.1)** (`nearpay-brain/roadmap/development-plan.md`).
+
+## Built with
+
+Libraries are listed here as they are added (hackathon rule Q-005). Code and documentation are written with AI assistance (Claude) under human direction and review.
