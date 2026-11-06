@@ -241,3 +241,12 @@ export async function consumerLag(bus: Bus, stream: string, durable: string): Pr
   const info = await bus.jsm.consumers.info(stream, durable);
   return info.num_pending + info.num_ack_pending;
 }
+
+export {
+  type DomainConsumersOptions,
+  domainConsumersTask,
+  durablesOf,
+  type EventHandler,
+  startDomainConsumers,
+  unhandledSubjects,
+} from "./consumers.js";

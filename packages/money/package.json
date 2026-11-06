@@ -1,6 +1,6 @@
 {
   "name": "@nearpay-internal/money",
-  "version": "0.1.0",
+  "version": "0.1.2",
   "description": "Integer money: bigint amounts, unit parsing/formatting, exact rational arithmetic, bps and rounding helpers.",
   "license": "Apache-2.0",
   "type": "module",
