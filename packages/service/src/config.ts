@@ -65,10 +65,33 @@ export function url(protocols: readonly string[] = ["http:", "https:"]) {
 
 export const LOG_LEVELS = ["fatal", "error", "warn", "info", "debug", "trace", "silent"] as const;
 
+/** Deployment environments: `local` (Compose on a laptop), `server` (single host, ADR-0015), `test`. */
+export const ENVS = ["local", "server", "test"] as const;
+export type Env = (typeof ENVS)[number];
+
+/**
+ * True only for `local` and `test` — the environments where development relaxations (dev keys,
+ * relaxed cookies, seeded fixtures, …) may apply. Anything else, including an unknown or missing
+ * value, is treated as a real deployment (fail closed). Services use this instead of comparing
+ * `config.env` by hand.
+ */
+export function isDevEnv(env: string | null | undefined): env is "local" | "test" {
+  return env === "local" || env === "test";
+}
+
+/** Extra guidance appended when a base key is missing. */
+const REQUIRED_HINTS: Readonly<Record<string, string>> = {
+  env: `set it explicitly to one of ${ENVS.join(", ")} (there is no default; local/test enable development relaxations)`,
+};
+
 /** Keys every service process understands. */
 export const baseConfigShape = {
-  /** `local` (Compose on a laptop), `server` (single host, ADR-0015) or `test`. */
-  env: z.enum(["local", "server", "test"]).default("local"),
+  /**
+   * `local` (Compose on a laptop), `server` (single host, ADR-0015) or `test`. Required (since
+   * 0.2.1): a process started without `NP_ENV` fails at boot instead of silently getting the
+   * development relaxations of `local`.
+   */
+  env: z.enum(ENVS),
   logLevel: z.enum(LOG_LEVELS).default("info"),
   host: z.string().default("0.0.0.0"),
   port: port(8080),
@@ -165,8 +188,9 @@ export function loadConfig<S extends z.ZodRawShape>(
       reported.add(key);
       const name = envName(key);
       const missing = raw[key] === undefined;
+      const hint = missing && Object.hasOwn(REQUIRED_HINTS, key) ? ` — ${REQUIRED_HINTS[key]}` : "";
       issues.push(
-        `${name}${isSecret(schema.shape[key] as z.ZodType) ? "_FILE" : ""}: ${missing ? "is required" : i.message}`,
+        `${name}${isSecret(schema.shape[key] as z.ZodType) ? "_FILE" : ""}: ${missing ? "is required" : i.message}${hint}`,
       );
     }
   }
