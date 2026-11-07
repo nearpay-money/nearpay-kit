@@ -1,0 +1,6 @@
+/*
+ * DM Sans (OFL-1.1), self-hosted from @fontsource-variable/dm-sans — CSP `font-src 'self'`.
+ * Variable weight + optical size axes, so 64 px display text gets the tighter display cut the
+ * Figma uses. Only the subsets a page needs are downloaded (unicode-range).
+ */
+@import "@fontsource-variable/dm-sans/opsz.css";
