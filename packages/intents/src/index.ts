@@ -19,6 +19,7 @@ export {
   type RelayerSigner,
   RpcError,
   type SimulateIntentsOutput,
+  type TxWaitUntil,
   VerifierError,
   type VerifierFailure,
 } from "./rpc.js";

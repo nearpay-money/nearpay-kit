@@ -273,6 +273,32 @@ describe("intentsRpc", () => {
       ),
     ).rejects.toThrow(/function-call keys/);
   });
+  it("sends an already-signed tx and returns the outcome with its block hash", async () => {
+    const outcome = {
+      status: { SuccessValue: "" },
+      transaction_outcome: { id: "HASH1", block_hash: "BLOCK1", outcome: { gas_burnt: 100, logs: [] } },
+      receipts_outcome: [{ outcome: { gas_burnt: 200, logs: MAINNET_LOGS, status: {} } }],
+    };
+    let sent: unknown;
+    const f = rpcMock({
+      send_tx: (params) => {
+        sent = params;
+        return outcome;
+      },
+    });
+    const rpc = intentsRpc({ rpcUrls: ["https://a.example"], fetch: f });
+    const r = await rpc.sendSignedTx({ bytes: new Uint8Array([1, 2, 3]), txHash: "HASH1" });
+    expect(r).toMatchObject({ txHash: "HASH1", status: "success", blockHash: "BLOCK1", gasBurnt: 300n });
+    expect(sent).toEqual({ signed_tx_base64: "AQID", wait_until: "FINAL" });
+    await expect(rpc.sendSignedTx({ bytes: new Uint8Array([1]), txHash: "OTHER" })).rejects.toBeInstanceOf(RpcError);
+    const down = vi.fn(async () => new Response("x", { status: 503 })) as unknown as typeof fetch;
+    await expect(
+      intentsRpc({ rpcUrls: ["https://a.example"], fetch: down }).sendSignedTx({
+        bytes: new Uint8Array([1]),
+        txHash: "H",
+      }),
+    ).rejects.toBeInstanceOf(RpcError);
+  });
   it("summarises execution outcomes and failures", async () => {
     const outcome = (failure?: unknown) => ({
       status: failure ? { Failure: failure } : { SuccessValue: "" },
