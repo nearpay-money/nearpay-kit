@@ -3,11 +3,19 @@
 All packages in this repository share one version. Breaking changes bump the major version and
 carry a migration note here (semver, foundations §4).
 
-## Unreleased
+## 0.2.0 — 2026-11-07
 
-### rails-fx (Stage 2, step 2.1)
+Stage 2 kit release (step 2.1). Additive except the ops-principal tightening below (a 0.x minor;
+see the migration note).
 
-Additive (no migration needed); no version bump (the lead releases):
+### spec 0.2.0
+
+- Every package depends on `@nearpay/spec` / `@nearpay-internal/spec` **0.2.0** (Stage 2 contract
+  freeze). No kit code reads the 1Click `OneClick*` fields that became nullish.
+- `@nearpay-internal/service`: `ops` routes (`visibility: "ops"`, `/ops/…`) get the 10 s request
+  budget of gateway-routed routes (internal routes keep 5 s).
+
+### money / http / intents (rails-fx, CR-15-16)
 
 - `@nearpay-internal/money`: `RoundingMode` (`floor`, `ceil`, `half_even` — banker's, `half_up`) and
   `roundRational`; `toDecimalString` accepts every mode; `toDisplayDecimal` (≤ 18 places, half-even,
@@ -23,12 +31,33 @@ Additive (no migration needed); no version bump (the lead releases):
   the outcome; `ExecuteResult.blockHash` (optional) is the including block's hash; `TxWaitUntil` type;
   `executeIntents` now delegates to `sendSignedTx` (CR-15-16).
 
-### ui (design system)
+### ops principals (auth / service / testing)
 
-Additive (no migration needed):
+- `@nearpay-internal/auth` `authorizeRoute` — which `@nearpay-internal/service` runs for every route —
+  enforces console (ops) principals, fail closed: the token must carry a known `ops_role`
+  (`OPS_ROLES`) and no other principal type may carry one; the route must list an `ops:<scope>` that
+  the principal holds and its role is granted (`OPS_ROLE_SCOPES`); `ops_role` must be in the route's
+  `opsRoles` (an `ops` route without `opsRoles` admits nobody; internal routes that declare
+  `opsRoles`, e.g. `decideKyb`, are checked too); `stepUp` routes need a fresh `step_up_until`
+  exactly as for sessions. `ops` routes refuse every non-ops principal (anonymous sign-in routes
+  under `/ops/auth/` stay anonymous); non-ops routes admit ops principals only through an explicit
+  `ops:` entry (e.g. `listEvidence` with `ops:rails.read`). New exported type `AuthorizableRoute`;
+  `ClaimsInput` gains `ops_role`.
+- **Migration:** ops tokens without `ops_role` (possible before spec 0.2.0) are now refused with
+  `permission_denied`; identity mints `ops_role` for every `ptype=ops` token (identity §6.3).
+- `@nearpay-internal/testing`: `opsClaims`, `mintOpsToken({role, scopes, stepUp, sub})`,
+  `testOpsToken(...)` (a token provider for `httpClient({serviceToken})`), `opsHeaders(...)`;
+  `mockPeer` serves console routes (`OPS_ROUTES`, also part of `INTERNAL_ROUTES`) with the same
+  enforcement as production.
+
+### new `@nearpay-internal/ui`
 
 - New package `@nearpay-internal/ui` — the NearPay design system (tokens, component CSS, React 19
-  components, money/countdown/contrast helpers) with a static gallery. Peer: `react@^19`.
+  components, money/countdown/contrast helpers) with a static gallery. Peer: `react@^19`. Decision:
+  `nearpay-brain/decisions/0021-shared-ui-package.md`.
+- Stat values never overflow their column: stat columns shrink (`minmax(min(200px, 100%), 1fr)`), each
+  stat is an inline-size container, values step down to h3 below 180 px and h4 below 140 px, the
+  suffix symbol may wrap (gallery Ref C · Payment detail fix).
 - `scripts/build-package.mjs`: optional `kitBuild` in a package's `package.json` (`compilerOptions`
   merged into the build tsconfig, `copy` for non-TS assets such as CSS).
 - Unit tests may be `.test.tsx`; `packages/ui` tests run in jsdom.

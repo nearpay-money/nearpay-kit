@@ -440,7 +440,7 @@ function App() {
   return (
     <ThemeRoot theme="light" className="g-app">
       <header className="g-header">
-        <p className="g-header__eyebrow">@nearpay-internal/ui · v0.1.2</p>
+        <p className="g-header__eyebrow">@nearpay-internal/ui · v0.2.0</p>
         <h1 className="np-text-h1">NearPay design system</h1>
         <p className="g-header__lede">
           Tokens, components and reference screens rebuilt from the owner’s Figma. Every component is shown in light and
