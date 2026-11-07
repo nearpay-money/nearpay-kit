@@ -24,7 +24,7 @@
     "build": "node ../../scripts/build-package.mjs"
   },
   "dependencies": {
-    "@nearpay/spec": "0.1.1",
+    "@nearpay/spec": "0.2.0",
     "jose": "6.2.15"
   },
   "peerDependencies": {
@@ -32,6 +32,6 @@
   },
   "devDependencies": {
     "zod": "4.6.7",
-    "@nearpay-internal/spec": "0.1.1"
+    "@nearpay-internal/spec": "0.2.0"
   }
 }
