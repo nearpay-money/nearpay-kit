@@ -67,7 +67,12 @@ export interface MockPeer {
 export interface MockPeerOptions {
   /** Peer service whose routes are served (e.g. `identity`). */
   service: ServiceName;
-  /** Route table to take the peer's routes from (`INTERNAL_ROUTES`, `PUBLIC_ROUTES`, or both). */
+  /**
+   * Route table to take the peer's routes from (`INTERNAL_ROUTES`, `PUBLIC_ROUTES`, or both).
+   * `INTERNAL_ROUTES` includes the console routes (`OPS_ROUTES`); pass `OPS_ROUTES` alone for an
+   * ops-only peer. Call it as an operator with `testOpsToken({role, stepUp})` (ops role, scope and
+   * step-up are enforced exactly as in production).
+   */
   routes: readonly AnyRoute[];
   /** Verifies caller tokens; default: tokens minted by `mintTestToken`. */
   keys?: KeySource;

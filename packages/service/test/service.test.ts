@@ -16,8 +16,8 @@ import type { ClaimsInput } from "@nearpay-internal/auth";
 import { IdempotencyConflict } from "@nearpay-internal/db";
 import { currentContext } from "@nearpay-internal/http";
 import { newId } from "@nearpay-internal/ids";
-import { getInternalPaymentIntent } from "@nearpay-internal/spec";
-import { checkoutSession, mintTestToken, paymentIntent, testKeySource } from "@nearpay-internal/testing";
+import { getInternalPaymentIntent, getOpsReconciliationRun, resolveOpsReconciliationRun } from "@nearpay-internal/spec";
+import { checkoutSession, mintTestToken, opsHeaders, paymentIntent, testKeySource } from "@nearpay-internal/testing";
 import { InMemorySpanExporter } from "@opentelemetry/sdk-trace";
 import { afterEach, describe, expect, it } from "vitest";
 import {
@@ -210,6 +210,53 @@ describe("routing, auth and validation", () => {
       },
     });
     expect(wrongScope.statusCode).toBe(403);
+  });
+
+  it("authorizes ops routes for ops principals by ops_role, scope and step-up only", async () => {
+    const { s } = make(
+      [
+        implement(getOpsReconciliationRun, async () => {
+          throw new ApiError("resource_missing");
+        }),
+        implement(resolveOpsReconciliationRun, async () => {
+          throw new ApiError("resource_missing");
+        }),
+      ],
+      { responseValidation: "off" },
+    );
+    const id = newId("rcn");
+    const get = async (headers: Record<string, string>) =>
+      s.app.inject({ url: `/ops/reconciliation_runs/${id}`, headers });
+    const resolve = async (headers: Record<string, string>) =>
+      s.app.inject({ method: "POST", url: `/ops/reconciliation_runs/${id}/resolution`, headers, payload: {} });
+    const codeOf = (r: { body: string }) => parseEnvelope(r.body).code;
+
+    expect((await get(await opsHeaders({ role: "ops" }))).statusCode).toBe(404); // reached the handler
+    expect((await get(await opsHeaders({ role: "ops", scopes: ["rails.read"] }))).statusCode).toBe(403);
+    const svc = await get({
+      "x-nearpay-token": await mintTestToken({ sub: "payments", ptype: "service", scp: ["payments.read"] }),
+    });
+    expect([svc.statusCode, codeOf(svc)]).toEqual([403, "permission_denied"]);
+    const session = await get({
+      "x-nearpay-token": await mintTestToken({
+        sub: newId("usr"),
+        acct: ACCT,
+        lm: false,
+        ptype: "session",
+        role: "owner",
+        scp: ["payments.read"],
+        step_up_until: Math.floor(Date.now() / 1000) + 300,
+      }),
+    });
+    expect(session.statusCode).toBe(403);
+    expect((await get({ "x-nearpay-token": await secretKey() })).statusCode).toBe(403);
+
+    const stale = await resolve(await opsHeaders({ role: "ops_admin" }));
+    expect([stale.statusCode, codeOf(stale)]).toEqual([401, "step_up_required"]);
+    const expired = await resolve(await opsHeaders({ role: "ops_admin", stepUp: -1 }));
+    expect(codeOf(expired)).toBe("step_up_required");
+    const fresh = await resolve(await opsHeaders({ role: "ops_admin", stepUp: true }));
+    expect([401, 403]).not.toContain(fresh.statusCode); // past authorization (body validation / handler)
   });
 
   it("serves open routes without a token and validates their headers", async () => {

@@ -30,4 +30,13 @@ export {
   mockPeer,
   testServiceToken,
 } from "./peer.js";
-export { mintTestToken, testKeySource, testSigningKey } from "./tokens.js";
+export {
+  mintOpsToken,
+  mintTestToken,
+  type OpsTokenOptions,
+  opsClaims,
+  opsHeaders,
+  testKeySource,
+  testOpsToken,
+  testSigningKey,
+} from "./tokens.js";

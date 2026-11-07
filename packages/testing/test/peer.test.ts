@@ -1,16 +1,27 @@
-import { ErrorEnvelope, SERVICE_CLIENT_SCOPES } from "@nearpay/spec";
+import { ErrorEnvelope, OPS_ROLE_SCOPES, SERVICE_CLIENT_SCOPES } from "@nearpay/spec";
 import { verifyInternalJwt } from "@nearpay-internal/auth";
 import { HttpError, httpClient } from "@nearpay-internal/http";
 import { newId } from "@nearpay-internal/ids";
-import { createScreening, getSettlementContext, INTERNAL_ROUTES } from "@nearpay-internal/spec";
+import {
+  createScreening,
+  getSettlementContext,
+  INTERNAL_ROUTES,
+  listOpsCases,
+  OPS_ROUTES,
+  removeOpsBlocklistEntry,
+} from "@nearpay-internal/spec";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
   type MockPeer,
+  mintOpsToken,
   mintServiceToken,
   mintTestToken,
   mockError,
   mockPeer,
+  opsClaims,
+  opsHeaders,
   testKeySource,
+  testOpsToken,
   testServiceToken,
 } from "../src/index.js";
 
@@ -128,5 +139,80 @@ describe("mockPeer", () => {
       testKeySource(),
     );
     expect(other.ptype).toBe("anonymous");
+  });
+});
+
+describe("ops principals (console)", () => {
+  const opsClient = (o: Parameters<typeof testOpsToken>[0]) =>
+    httpClient({
+      target: "compliance",
+      baseUrl: compliance.url,
+      timeoutMs: 2_000,
+      attempts: 1,
+      serviceToken: testOpsToken(o),
+    });
+
+  it("mints ops tokens with the role's scopes, ops_role and optional step-up", async () => {
+    const plain = await verifyInternalJwt(await mintOpsToken(), testKeySource());
+    expect([plain.ptype, plain.ops_role, plain.scp, plain.step_up_until]).toEqual([
+      "ops",
+      "ops",
+      [...OPS_ROLE_SCOPES.ops],
+      undefined,
+    ]);
+    expect(plain.sub).toMatch(/^usr_/);
+    const admin = await verifyInternalJwt(await mintOpsToken({ role: "ops_admin", stepUp: true }), testKeySource());
+    expect(admin.ops_role).toBe("ops_admin");
+    expect(admin.step_up_until).toBeGreaterThan(Date.now() / 1000 + 500);
+    expect(opsClaims({ stepUp: -5 }, 1000).step_up_until).toBe(995);
+    expect(opsClaims({ scopes: ["sentinel.read"] }).scp).toEqual(["sentinel.read"]);
+    expect(Object.keys(await opsHeaders())).toEqual(["X-NearPay-Token"]);
+  });
+
+  it("serves console routes of a peer and enforces opsRoles, scope and step-up", async () => {
+    compliance.reset();
+    compliance.on(
+      listOpsCases,
+      async () => ({ object: "list" as const, data: [], has_more: false, url: "/ops/cases" }) as never,
+    );
+    compliance.on(removeOpsBlocklistEntry, async () => mockError("resource_missing"));
+    const page = await opsClient({ role: "ops" }).call(listOpsCases, { query: { livemode: false } as never });
+    expect(page.data).toEqual([]);
+    expect(compliance.calls[0]?.principal?.ops_role).toBe("ops");
+
+    const remove = (o: Parameters<typeof testOpsToken>[0]) =>
+      opsClient(o)
+        .call(removeOpsBlocklistEntry, { params: { id: "bl_01jbz9k3m4n5p6q7r8s9t0v1w2" } as never, body: {} as never })
+        .then(
+          () => null,
+          (e) => e as HttpError,
+        );
+    const asOps = await remove({ role: "ops", stepUp: true });
+    expect([asOps?.status, asOps?.error?.code]).toEqual([403, "permission_denied"]);
+    const noStepUp = await remove({ role: "ops_admin" });
+    expect([noStepUp?.status, noStepUp?.error?.code]).toEqual([401, "step_up_required"]);
+    const service = await httpClient({
+      target: "compliance",
+      baseUrl: compliance.url,
+      timeoutMs: 2_000,
+      attempts: 1,
+      serviceToken: testServiceToken("payments"),
+    })
+      .call(listOpsCases, { query: { livemode: false } as never })
+      .then(
+        () => null,
+        (e) => e as HttpError,
+      );
+    expect(service?.status).toBe(403);
+    expect(compliance.callsTo(removeOpsBlocklistEntry)).toHaveLength(0);
+  });
+
+  it("starts an ops-only peer from OPS_ROUTES", async () => {
+    const sentinel = await mockPeer({ service: "sentinel", routes: OPS_ROUTES });
+    try {
+      expect(sentinel.service).toBeTruthy();
+    } finally {
+      await sentinel.stop();
+    }
   });
 });
