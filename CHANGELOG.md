@@ -3,6 +3,16 @@
 All packages in this repository share one version. Breaking changes bump the major version and
 carry a migration note here (semver, foundations §4).
 
+## Unreleased
+
+Additive (no migration needed):
+
+- New package `@nearpay-internal/ui` — the NearPay design system (tokens, component CSS, React 19
+  components, money/countdown/contrast helpers) with a static gallery. Peer: `react@^19`.
+- `scripts/build-package.mjs`: optional `kitBuild` in a package's `package.json` (`compilerOptions`
+  merged into the build tsconfig, `copy` for non-TS assets such as CSS).
+- Unit tests may be `.test.tsx`; `packages/ui` tests run in jsdom.
+
 ## 0.1.2 — Stage 1, step 1.2
 
 Additive (no migration needed):
