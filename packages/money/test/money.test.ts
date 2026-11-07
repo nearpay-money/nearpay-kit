@@ -7,6 +7,7 @@ import {
   bpsOf,
   ceil,
   cmp,
+  convertUnits,
   div,
   fiatFromJson,
   fiatToJson,
@@ -20,12 +21,18 @@ import {
   mulDivCeil,
   mulDivFloor,
   parseDecimal,
+  parseJsonDecimals,
   parseUnits,
+  ratioFromWire,
   rational,
+  ratioToWire,
   relativeDiff,
+  roundRational,
   sub,
   toBaseUnits,
   toDecimalString,
+  toDisplayDecimal,
+  toUsdMicros,
 } from "../src/index.js";
 
 const big = fc.bigInt({ min: 0n, max: 10n ** 40n });
@@ -180,5 +187,72 @@ describe("rationals", () => {
     // USD 25.00 into a token priced at USD 0.9998 with 6 decimals → floor(25 / 0.9998 × 10^6)
     const units = floor(mul(div(rational(2500n, 100n), parseDecimal("0.9998")), rational(10n ** 6n)));
     expect(units).toBe(25_005_001n);
+  });
+});
+
+// stage 2 — rails-fx: explicit rounding, wire ratios, unit conversion, lossless JSON
+
+describe("stage 2 FX helpers", () => {
+  it("rounds half-even (banker's) and half-up explicitly", () => {
+    const r = (s: string) => parseDecimal(s);
+    expect(roundRational(r("2.5"), "half_even")).toBe(2n);
+    expect(roundRational(r("3.5"), "half_even")).toBe(4n);
+    expect(roundRational(r("2.5"), "half_up")).toBe(3n);
+    expect(roundRational(r("-2.5"), "half_up")).toBe(-3n);
+    expect(roundRational(r("-2.5"), "half_even")).toBe(-2n);
+    expect(roundRational(r("2.4999"), "half_up")).toBe(2n);
+    expect(roundRational(r("2.0001"), "floor")).toBe(2n);
+    expect(roundRational(r("2.0001"), "ceil")).toBe(3n);
+    expect(toDecimalString(r("0.125"), 2, "half_even")).toBe("0.12");
+    expect(toDecimalString(r("0.135"), 2, "half_even")).toBe("0.14");
+  });
+
+  it("half-even never differs from the exact value by more than half a unit", () => {
+    fc.assert(
+      fc.property(
+        fc.bigInt({ min: -(10n ** 30n), max: 10n ** 30n }),
+        fc.bigInt({ min: 1n, max: 10n ** 20n }),
+        (n, d) => {
+          const q = rational(n, d);
+          const v = roundRational(q, "half_even");
+          const diff = sub(rational(v), q);
+          return cmp(rational(diff.num < 0n ? -diff.num : diff.num, diff.den), rational(1n, 2n)) <= 0;
+        },
+      ),
+    );
+  });
+
+  it("renders display decimals and round-trips wire ratios", () => {
+    const cross = div(parseDecimal("1.0823"), parseDecimal("0.8571")); // USD per GBP via EUR, not a finite decimal
+    expect(toDisplayDecimal(cross)).toBe("1.262746470656866177");
+    expect(ratioFromWire(ratioToWire(cross))).toEqual(cross);
+    expect(ratioToWire(parseDecimal("1.0823"))).toEqual({ num: "10823", den: "10000" });
+    expect(() => ratioFromWire({ num: "1.5", den: "1" })).toThrow(RangeError);
+    expect(() => ratioFromWire({ num: "1", den: "0" })).toThrow(RangeError);
+    expect(() => ratioToWire(rational(-1n))).toThrow(RangeError);
+  });
+
+  it("converts between unit systems with explicit rounding", () => {
+    const eurUsd = parseDecimal("1.0823");
+    // EUR 19.99 → USD cents, floor / ceil
+    expect(convertUnits(1999n, 2, eurUsd, 2, "floor")).toBe(2163n);
+    expect(convertUnits(1999n, 2, eurUsd, 2, "ceil")).toBe(2164n);
+    // EUR 19.99 → USDC base units (6 decimals) at par after FX
+    expect(convertUnits(1999n, 2, eurUsd, 6, "floor")).toBe(21635177n);
+    // JPY (exponent 0) → USD micros
+    expect(toUsdMicros(1500n, "jpy", parseDecimal("0.0065"))).toBe(9750000n);
+    // USD 2.00 → wNEAR (24 decimals) at USD 2.5 per NEAR
+    expect(convertUnits(200n, 2, div(rational(1n), parseDecimal("2.5")), 24, "floor")).toBe(8n * 10n ** 23n);
+    expect(() => convertUnits(1 as unknown as bigint, 2, eurUsd, 2, "floor")).toThrow(TypeError);
+  });
+
+  it("parses JSON numbers as their exact source text", () => {
+    const v = parseJsonDecimals('{"near":{"usd":2.4891234567890123456,"last_updated_at":1793966374},"x":[1e-7]}') as {
+      near: { usd: string; last_updated_at: string };
+      x: string[];
+    };
+    expect(v.near.usd).toBe("2.4891234567890123456");
+    expect(v.near.last_updated_at).toBe("1793966374");
+    expect(parseDecimal(v.x[0] as string)).toEqual(rational(1n, 10_000_000n));
   });
 });
