@@ -1,6 +1,6 @@
 import { fileURLToPath } from "node:url";
 
-const PACKAGES = ["ids", "money", "chains", "intents", "db", "bus", "auth", "http", "service", "testing"];
+const PACKAGES = ["ids", "money", "chains", "intents", "db", "bus", "auth", "http", "service", "testing", "ui"];
 
 /** Tests import sibling kit packages from source. */
 export const alias = Object.fromEntries(

@@ -23,6 +23,16 @@ Additive (no migration needed); no version bump (the lead releases):
   the outcome; `ExecuteResult.blockHash` (optional) is the including block's hash; `TxWaitUntil` type;
   `executeIntents` now delegates to `sendSignedTx` (CR-15-16).
 
+### ui (design system)
+
+Additive (no migration needed):
+
+- New package `@nearpay-internal/ui` — the NearPay design system (tokens, component CSS, React 19
+  components, money/countdown/contrast helpers) with a static gallery. Peer: `react@^19`.
+- `scripts/build-package.mjs`: optional `kitBuild` in a package's `package.json` (`compilerOptions`
+  merged into the build tsconfig, `copy` for non-TS assets such as CSS).
+- Unit tests may be `.test.tsx`; `packages/ui` tests run in jsdom.
+
 ## 0.1.2 — Stage 1, step 1.2
 
 Additive (no migration needed):

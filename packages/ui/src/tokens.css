@@ -1,0 +1,195 @@
+/*
+ * @nearpay-internal/ui — design tokens.
+ *
+ * Themes: light (default), dark, auto (follows prefers-color-scheme).
+ *   <div class="np-root" data-theme="light | dark | auto">
+ * Every token is a custom property, so a merchant appearance (accent, radius) can be applied at
+ * runtime with element.style.setProperty(...) on the theme root (allowed under the checkout CSP;
+ * see applyAppearance()). Tokens are re-declared on .np-root / [data-theme] so derived tokens
+ * (e.g. card radius) follow overrides made on that element.
+ * Keep in sync with src/tokens.ts (enforced by test/tokens.test.ts).
+ */
+
+:root,
+.np-root,
+[data-theme] {
+  /* Brand primitives */
+  --np-ink: #132d31;
+  --np-ink-deep: #102c30;
+  --np-teal: #087a68;
+  --np-teal-hover: #065e52;
+  --np-teal-pressed: #054c43;
+  --np-mint: #65dfc0;
+  --np-mint-hover: #85e8cf;
+  --np-mint-soft: #eaf5f1;
+  --np-canvas: #f7f9f8;
+  --np-border-fine: #dce5e3;
+  --np-white: #ffffff;
+
+  /* Typography */
+  --np-font-sans:
+    "DM Sans Variable", "DM Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --np-font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --np-text-display: 64px;
+  --np-text-h1: 48px;
+  --np-text-h2: 32px;
+  --np-text-h3: 24px;
+  --np-text-h4: 20px;
+  --np-text-body: 16px;
+  --np-text-small: 14px;
+  --np-text-caption: 12px;
+  --np-text-amount: 42px;
+  --np-weight-regular: 400;
+  --np-weight-medium: 500;
+  --np-weight-semibold: 600;
+  --np-leading-tight: 1.1;
+  --np-leading-heading: 1.25;
+  --np-leading-body: 1.5;
+  --np-tracking-display: -0.02em;
+  --np-tracking-heading: -0.015em;
+  --np-tracking-amount: -0.03em;
+
+  /* Space (4/8 px grid) */
+  --np-space-0-5: 2px;
+  --np-space-1: 4px;
+  --np-space-2: 8px;
+  --np-space-3: 12px;
+  --np-space-4: 16px;
+  --np-space-5: 20px;
+  --np-space-6: 24px;
+  --np-space-8: 32px;
+  --np-space-10: 40px;
+  --np-space-12: 48px;
+  --np-space-16: 64px;
+
+  /* Sizes */
+  --np-size-control: 48px;
+  --np-size-control-dense: 40px;
+  --np-size-field: 56px;
+  --np-size-gutter-mobile: 24px;
+  --np-size-gutter-workspace: 48px;
+  --np-size-sidebar: 224px;
+  --np-size-topbar: 72px;
+
+  /* Radius — merchants may set --np-radius-control to 0–24px */
+  --np-radius-control: 8px;
+  --np-radius-card: min(calc(var(--np-radius-control) * 1.5), 24px);
+  --np-radius-badge: min(calc(var(--np-radius-control) / 2), 8px);
+  --np-radius-full: 9999px;
+
+  /* Motion */
+  --np-duration-fast: 120ms;
+  --np-duration-base: 200ms;
+  --np-ease: cubic-bezier(0.2, 0, 0, 1);
+
+  /* Elevation & layers */
+  --np-shadow-overlay: 0 1px 2px rgb(19 45 49 / 0.06), 0 12px 32px rgb(19 45 49 / 0.16);
+  --np-shadow-focus: 0 0 0 2px var(--np-color-surface), 0 0 0 4px var(--np-color-focus);
+  --np-z-overlay: 1000;
+  --np-z-toast: 1100;
+
+  /* Semantic colours — light */
+  color-scheme: light;
+  --np-color-bg: #f7f9f8;
+  --np-color-surface: #ffffff;
+  --np-color-surface-muted: #f7f9f8;
+  --np-color-text: #132d31;
+  --np-color-text-secondary: #52676b;
+  --np-color-border: #dce5e3;
+  --np-color-border-control: #7f928f;
+  --np-color-accent: #087a68;
+  --np-color-accent-hover: #065e52;
+  --np-color-accent-pressed: #054c43;
+  --np-color-on-accent: #ffffff;
+  --np-color-accent-text: #087a68;
+  --np-color-accent-subtle: #eaf5f1;
+  --np-color-accent-subtle-text: #087a68;
+  --np-color-focus: #087a68;
+  --np-color-success-bg: #eaf6ee;
+  --np-color-success-fg: #17744d;
+  --np-color-warning-bg: #fff5e4;
+  --np-color-warning-fg: #895710;
+  --np-color-danger-bg: #fceef0;
+  --np-color-danger-fg: #b44048;
+  --np-color-neutral-bg: #eef2f1;
+  --np-color-neutral-fg: #52676b;
+  --np-color-inverse-bg: #132d31;
+  --np-color-inverse-text: #ffffff;
+  --np-color-skeleton: #e9efed;
+  --np-color-overlay: rgb(19 45 49 / 0.48);
+}
+
+[data-theme="dark"] {
+  color-scheme: dark;
+  --np-color-bg: #102c30;
+  --np-color-surface: #193a3f;
+  --np-color-surface-muted: #143236;
+  --np-color-text: #ffffff;
+  --np-color-text-secondary: #a9c0be;
+  --np-color-border: #2d4c50;
+  --np-color-border-control: #6e8c8a;
+  --np-color-accent: #65dfc0;
+  --np-color-accent-hover: #85e8cf;
+  --np-color-accent-pressed: #4fd3b2;
+  --np-color-on-accent: #102c30;
+  --np-color-accent-text: #65dfc0;
+  --np-color-accent-subtle: #1e4c45;
+  --np-color-accent-subtle-text: #65dfc0;
+  --np-color-focus: #65dfc0;
+  --np-color-success-bg: #173f37;
+  --np-color-success-fg: #7fe0b5;
+  --np-color-warning-bg: #3d3320;
+  --np-color-warning-fg: #f2c879;
+  --np-color-danger-bg: #45262b;
+  --np-color-danger-fg: #ff9aa2;
+  --np-color-neutral-bg: #24434a;
+  --np-color-neutral-fg: #b3cac8;
+  --np-color-inverse-bg: #ffffff;
+  --np-color-inverse-text: #132d31;
+  --np-color-skeleton: #24434a;
+  --np-color-overlay: rgb(6 20 22 / 0.64);
+  --np-shadow-overlay: 0 1px 2px rgb(0 0 0 / 0.2), 0 12px 32px rgb(0 0 0 / 0.4);
+}
+
+@media (prefers-color-scheme: dark) {
+  [data-theme="auto"] {
+    color-scheme: dark;
+    --np-color-bg: #102c30;
+    --np-color-surface: #193a3f;
+    --np-color-surface-muted: #143236;
+    --np-color-text: #ffffff;
+    --np-color-text-secondary: #a9c0be;
+    --np-color-border: #2d4c50;
+    --np-color-border-control: #6e8c8a;
+    --np-color-accent: #65dfc0;
+    --np-color-accent-hover: #85e8cf;
+    --np-color-accent-pressed: #4fd3b2;
+    --np-color-on-accent: #102c30;
+    --np-color-accent-text: #65dfc0;
+    --np-color-accent-subtle: #1e4c45;
+    --np-color-accent-subtle-text: #65dfc0;
+    --np-color-focus: #65dfc0;
+    --np-color-success-bg: #173f37;
+    --np-color-success-fg: #7fe0b5;
+    --np-color-warning-bg: #3d3320;
+    --np-color-warning-fg: #f2c879;
+    --np-color-danger-bg: #45262b;
+    --np-color-danger-fg: #ff9aa2;
+    --np-color-neutral-bg: #24434a;
+    --np-color-neutral-fg: #b3cac8;
+    --np-color-inverse-bg: #ffffff;
+    --np-color-inverse-text: #132d31;
+    --np-color-skeleton: #24434a;
+    --np-color-overlay: rgb(6 20 22 / 0.64);
+    --np-shadow-overlay: 0 1px 2px rgb(0 0 0 / 0.2), 0 12px 32px rgb(0 0 0 / 0.4);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root,
+  .np-root,
+  [data-theme] {
+    --np-duration-fast: 0ms;
+    --np-duration-base: 0ms;
+  }
+}
