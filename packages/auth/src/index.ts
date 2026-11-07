@@ -14,6 +14,9 @@ import {
   type ErrorCode,
   HEADERS,
   InternalTokenClaims,
+  OPS_ROLE_SCOPES,
+  OPS_ROLES,
+  type OpsRole,
   TOKEN_TTL_SECONDS,
 } from "@nearpay/spec";
 import { decodeProtectedHeader, exportJWK, importJWK, type JWK, jwtVerify, SignJWT } from "jose";
@@ -22,7 +25,10 @@ export type { Claims as InternalClaims };
 export { HEADERS };
 
 /** Claims a minter supplies; `iss`, `aud`, `iat` and `exp` are added when signing. */
-export type ClaimsInput = Pick<Claims, "sub" | "acct" | "lm" | "ptype" | "scp" | "rid" | "role" | "step_up_until">;
+export type ClaimsInput = Pick<
+  Claims,
+  "sub" | "acct" | "lm" | "ptype" | "scp" | "rid" | "role" | "step_up_until" | "ops_role"
+>;
 
 const ISSUER = "nearpay-identity";
 const AUDIENCE = "nearpay";
@@ -199,18 +205,40 @@ export function requireScope(claims: Claims, scope: string): void {
   if (!claims.scp.includes(scope)) throw new AuthError("permission_denied", `missing scope ${scope}`);
 }
 
+/** The route fields `authorizeRoute` reads. `visibility` absent = not an ops route. */
+export type AuthorizableRoute = Pick<AnyRoute, "auth" | "roles" | "stepUp" | "testModeOnly" | "id"> &
+  Partial<Pick<AnyRoute, "visibility" | "opsRoles">>;
+
+const isOpsRole = (r: unknown): r is OpsRole => (OPS_ROLES as readonly unknown[]).includes(r);
+
 /**
  * Authorizes a verified principal for a route from its spec definition. Routes that are
  * anonymous at the gateway (`anonymous`, `client_secret`, `gateway`, `internal`, `service_client`)
  * are not handled here.
+ *
+ * Ops principals (`ptype=ops`, console / ops CLI; spec 0.2.0, foundations §9) fail closed:
+ * - the token must carry a known `ops_role`; no other principal type may carry one;
+ * - the route must list an `ops:<scope>` entry whose scope the principal holds and its role is
+ *   granted (`OPS_ROLE_SCOPES`); a non-ops route admits ops principals only through such an entry
+ *   (e.g. `listEvidence` with `ops:rails.read`);
+ * - `ops_role` must be in the route's `opsRoles`; an `ops` route without `opsRoles` admits nobody;
+ * - `stepUp` routes need a fresh `step_up_until`, exactly as for sessions.
+ * `ops` routes refuse every other principal type (only anonymous sign-in routes admit `anonymous`).
  */
-export function authorizeRoute(
-  claims: Claims,
-  route: Pick<AnyRoute, "auth" | "roles" | "stepUp" | "testModeOnly" | "id">,
-  now = Math.floor(Date.now() / 1000),
-): void {
+export function authorizeRoute(claims: Claims, route: AuthorizableRoute, now = Math.floor(Date.now() / 1000)): void {
   if (route.testModeOnly && claims.lm === true)
     throw new AuthError("livemode_forbidden", `${route.id} is test-mode only`);
+  const opsRoute = route.visibility === "ops";
+  if (claims.ptype === "ops") {
+    authorizeOps(claims, route, opsRoute, now);
+    return;
+  }
+  if (claims.ops_role !== undefined) {
+    throw new AuthError("permission_denied", `${claims.ptype} principals carry no ops_role`);
+  }
+  if (opsRoute && claims.ptype !== "anonymous") {
+    throw new AuthError("permission_denied", `${claims.ptype} may not call ops route ${route.id}`);
+  }
   const allowed = route.auth.some((a) => {
     switch (claims.ptype) {
       case "secret_key":
@@ -225,8 +253,6 @@ export function authorizeRoute(
         return a === "session";
       case "service":
         return a.startsWith("service:") && claims.scp.includes(a.slice("service:".length));
-      case "ops":
-        return a.startsWith("ops:") && claims.scp.includes(a.slice("ops:".length));
       case "anonymous":
         return a === "anonymous";
       default:
@@ -238,9 +264,32 @@ export function authorizeRoute(
     if (route.roles && (!claims.role || !route.roles.includes(claims.role))) {
       throw new AuthError("permission_denied", `role ${claims.role ?? "none"} may not call ${route.id}`);
     }
-    if (route.stepUp && !(claims.step_up_until !== undefined && claims.step_up_until > now)) {
-      throw new AuthError("step_up_required", `${route.id} needs a fresh step-up`);
-    }
+    requireFreshStepUp(claims, route, now);
+  }
+}
+
+function authorizeOps(claims: Claims, route: AuthorizableRoute, opsRoute: boolean, now: number): void {
+  const role = claims.ops_role;
+  if (!isOpsRole(role)) throw new AuthError("permission_denied", `ops principal without a valid ops_role`);
+  const granted: readonly string[] = OPS_ROLE_SCOPES[role] ?? [];
+  const allowed = route.auth.some((a) => {
+    if (!a.startsWith("ops:")) return false;
+    const scope = a.slice("ops:".length);
+    return claims.scp.includes(scope) && granted.includes(scope);
+  });
+  if (!allowed) throw new AuthError("permission_denied", `ops may not call ${route.id}`);
+  if (opsRoute && !route.opsRoles?.length) {
+    throw new AuthError("permission_denied", `ops route ${route.id} declares no opsRoles`);
+  }
+  if (route.opsRoles && !route.opsRoles.includes(role)) {
+    throw new AuthError("permission_denied", `ops role ${role} may not call ${route.id}`);
+  }
+  requireFreshStepUp(claims, route, now);
+}
+
+function requireFreshStepUp(claims: Claims, route: AuthorizableRoute, now: number): void {
+  if (route.stepUp && !(claims.step_up_until !== undefined && claims.step_up_until > now)) {
+    throw new AuthError("step_up_required", `${route.id} needs a fresh step-up`);
   }
 }
 

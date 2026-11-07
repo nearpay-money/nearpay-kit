@@ -141,8 +141,11 @@ describe("authorizeRoute (spec route definitions)", () => {
     expect(() => authorizeRoute(svc, createExecution)).not.toThrow();
     expect(() => authorizeRoute({ ...svc, scp: ["rails.read"] }, createExecution)).toThrow(/may not call/);
     expect(() =>
-      authorizeRoute(full({ sub: "usr_x", ptype: "ops", scp: ["compliance.kyb.decide"] }), decideKyb),
+      authorizeRoute(full({ sub: "usr_x", ptype: "ops", ops_role: "ops", scp: ["compliance.kyb.decide"] }), decideKyb),
     ).not.toThrow();
+    expect(() =>
+      authorizeRoute(full({ sub: "usr_x", ptype: "ops", scp: ["compliance.kyb.decide"] }), decideKyb),
+    ).toThrow(/ops_role/);
     expect(() =>
       authorizeRoute(full({ sub: "payments", ptype: "service", scp: ["compliance.kyb.decide"] }), decideKyb),
     ).toThrow();

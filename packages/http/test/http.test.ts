@@ -174,6 +174,25 @@ describe("httpClient", () => {
     expect(seen[0]?.url).toBe("/v1/payment_intents/pi_01jbz9k3m4n5p6q7r8s9t0v1w2");
   });
 
+  it("route calls send extra headers (client secret) but never let them replace the service token", async () => {
+    reset(() => ({ status: 200, body: { not: "an intent" } }));
+    const c = httpClient({
+      target: "payments",
+      baseUrl: base,
+      timeoutMs: 1000,
+      serviceToken: async () => "svc",
+      ...fast,
+    });
+    await expect(
+      c.call(getPaymentIntent, {
+        params: { id: "pi_01jbz9k3m4n5p6q7r8s9t0v1w2" },
+        headers: { "X-NearPay-Client-Secret": "cs_secret", "x-nearpay-token": "forged" },
+      }),
+    ).rejects.toThrow();
+    expect(seen[0]?.headers["x-nearpay-client-secret"]).toBe("cs_secret");
+    expect(seen[0]?.headers["x-nearpay-token"]).toBe("svc");
+  });
+
   it("reports results for metrics", async () => {
     reset(null);
     const onResult = vi.fn();

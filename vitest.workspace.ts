@@ -6,8 +6,10 @@ export default defineWorkspace([
     resolve: { alias },
     test: {
       name: "unit",
-      include: ["packages/*/test/**/*.test.ts"],
+      include: ["packages/*/test/**/*.test.{ts,tsx}"],
       exclude: ["packages/*/test/**/*.int.test.ts", "**/node_modules/**"],
+      // React components render in jsdom; everything else stays on node.
+      environmentMatchGlobs: [["packages/ui/test/**/*.test.tsx", "jsdom"]],
     },
   },
   {

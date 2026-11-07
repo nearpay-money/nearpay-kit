@@ -2,6 +2,7 @@
   "extends": "./tsconfig.base.json",
   "compilerOptions": {
     "noEmit": true,
+    "jsx": "react-jsx",
     "types": ["node"],
     "paths": {
       "@nearpay-internal/ids": ["./packages/ids/src/index.ts"],
@@ -13,12 +14,15 @@
       "@nearpay-internal/auth": ["./packages/auth/src/index.ts"],
       "@nearpay-internal/http": ["./packages/http/src/index.ts"],
       "@nearpay-internal/service": ["./packages/service/src/index.ts"],
-      "@nearpay-internal/testing": ["./packages/testing/src/index.ts"]
+      "@nearpay-internal/testing": ["./packages/testing/src/index.ts"],
+      "@nearpay-internal/ui": ["./packages/ui/src/index.ts"]
     }
   },
   "include": [
     "packages/*/src",
     "packages/*/test",
+    "packages/ui/gallery/src",
+    "packages/ui/gallery/vite.config.ts",
     "scripts",
     "vitest.workspace.ts",
     "vitest.shared.ts",

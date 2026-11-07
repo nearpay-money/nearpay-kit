@@ -2,14 +2,14 @@
 
 > Small, versioned TypeScript runtime libraries shared by services: integer money, IDs, service bootstrap (Fastify + OpenTelemetry), Postgres helpers (outbox, inbox, idempotency), NATS JetStream bus, internal auth, resilient HTTP, NEAR Intents payload build/sign/verify, chain address validation, test utilities.
 
-|                                       |                                                                                              |
-| ------------------------------------- | -------------------------------------------------------------------------------------------- |
-| Group                                 | Contracts & shared                                                                           |
-| Kind                                  | library                                                                                      |
-| Ships as                              | npm (private): @nearpay-internal/{ids,money,chains,intents,db,bus,auth,http,service,testing} |
-| Owns                                  | Cross-cutting runtime code (no domain logic)                                                 |
-| Depends on (published artifacts only) | nearpay-spec                                                                                 |
-| First built in                        | Stage 1 (step 1.1)                                                                           |
+|                                       |                                                                                                 |
+| ------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| Group                                 | Contracts & shared                                                                              |
+| Kind                                  | library                                                                                         |
+| Ships as                              | npm (private): @nearpay-internal/{ids,money,chains,intents,db,bus,auth,http,service,testing,ui} |
+| Owns                                  | Cross-cutting runtime code (no domain logic)                                                    |
+| Depends on (published artifacts only) | nearpay-spec                                                                                    |
+| First built in                        | Stage 1 (step 1.1)                                                                              |
 
 ## Documentation
 
@@ -37,7 +37,8 @@ nearpay-kit/
 │   ├── auth/       internal JWT/JWKS, route authorization, service tokens
 │   ├── http/       outbound client: budgets, retries, circuit breaker, propagation
 │   ├── service/    Fastify bootstrap from spec routes, health, metrics, tracing, config
-│   └── testing/    Testcontainers fixtures, factories, event probes, test tokens
+│   ├── testing/    Testcontainers fixtures, factories, event probes, test tokens
+│   └── ui/         design system: tokens, component CSS, React components, gallery
 ├── scripts/        build-package.mjs, release-local.mjs
 └── .github/workflows/ci.yml
 ```

@@ -258,10 +258,108 @@ export function ceil(r: Rational): bigint {
   return r.num > 0n && q * r.den !== r.num ? q + 1n : q;
 }
 
+/**
+ * Rounding modes (explicit everywhere; foundations §6): `floor`/`ceil` toward −∞/+∞, `half_even`
+ * (banker's rounding: ties to the even neighbour), `half_up` (ties away from zero).
+ */
+export type RoundingMode = "floor" | "ceil" | "half_even" | "half_up";
+
+/** Rounds a rational to an integer with an explicit mode. */
+export function roundRational(r: Rational, mode: RoundingMode): bigint {
+  if (mode === "floor") return floor(r);
+  if (mode === "ceil") return ceil(r);
+  const lo = floor(r);
+  // twice the fractional part compared with one: 2·(r − lo) vs 1
+  const twiceFrac = 2n * (r.num - lo * r.den);
+  if (twiceFrac < r.den) return lo;
+  if (twiceFrac > r.den) return lo + 1n;
+  if (mode === "half_up") return r.num < 0n ? lo : lo + 1n;
+  return lo % 2n === 0n ? lo : lo + 1n;
+}
+
 /** Decimal rendering with exactly `places` digits, rounded as requested. */
-export function toDecimalString(r: Rational, places: number, rounding: "floor" | "ceil" = "floor"): string {
+export function toDecimalString(r: Rational, places: number, rounding: RoundingMode = "floor"): string {
   assertDecimals(places);
-  const scaled = mul(r, rational(10n ** BigInt(places)));
-  const v = rounding === "floor" ? floor(scaled) : ceil(scaled);
+  const v = roundRational(mul(r, rational(10n ** BigInt(places))), rounding);
   return formatUnits(v, places, places);
+}
+
+/** Decimal rendering with at most `places` digits (trailing zeros dropped), rounded as requested. */
+export function toDisplayDecimal(r: Rational, places = 18, rounding: RoundingMode = "half_even"): string {
+  assertDecimals(places);
+  return formatUnits(roundRational(mul(r, rational(10n ** BigInt(places))), rounding), places);
+}
+
+// ---------------------------------------------------------------------------------------------
+// Rates on the wire and unit conversion (spec 0.1.6 `Ratio` / `PriceRate`, rails §8.2)
+// ---------------------------------------------------------------------------------------------
+
+/** Wire form of an exact rate (`@nearpay-internal/spec` `Ratio`): integer strings. */
+export interface RatioWire {
+  readonly num: string;
+  readonly den: string;
+}
+
+const INT_RE = /^(0|[1-9][0-9]{0,77})$/;
+
+/** Renders a non-negative rational as the spec `Ratio` (reduced). */
+export function ratioToWire(r: Rational): RatioWire {
+  const x = rational(r.num, r.den);
+  if (x.num < 0n) throw new RangeError("rate must be non-negative");
+  const out = { num: x.num.toString(), den: x.den.toString() };
+  if (!INT_RE.test(out.num) || !INT_RE.test(out.den)) throw new RangeError("rate exceeds 78 digits");
+  return out;
+}
+
+/** Parses the spec `Ratio` (rejects anything but integer strings and a positive denominator). */
+export function ratioFromWire(w: RatioWire): Rational {
+  if (typeof w?.num !== "string" || typeof w?.den !== "string" || !INT_RE.test(w.num) || !INT_RE.test(w.den))
+    throw new RangeError("invalid ratio");
+  return rational(BigInt(w.num), BigInt(w.den));
+}
+
+/**
+ * Converts an integer amount between unit systems at an exact rate:
+ * `amount / 10^fromExp × rate × 10^toExp`, rounded with `mode`. Covers fiat→fiat
+ * (`fromExp`/`toExp` = ISO exponents, rate = to per from), fiat→asset (`toExp` = decimals,
+ * rate = 1 / price) and asset→fiat. Rounding is explicit: settlement amounts round `floor`,
+ * fees and payer totals `ceil` (foundations §6).
+ */
+export function convertUnits(
+  amount: bigint,
+  fromExp: number,
+  rate: Rational,
+  toExp: number,
+  mode: RoundingMode,
+): bigint {
+  assertAmount(amount);
+  assertNonNegative(amount, "amount");
+  assertDecimals(fromExp);
+  assertDecimals(toExp);
+  if (rate.num < 0n || rate.den <= 0n) throw new RangeError("rate must be non-negative with a positive denominator");
+  return roundRational(rational(amount * rate.num * 10n ** BigInt(toExp), rate.den * 10n ** BigInt(fromExp)), mode);
+}
+
+/** `fiat(amount, currency)` → USD micros (integer), rounded with `mode`; `rateToUsd` = USD per unit of `currency`. */
+export function toUsdMicros(
+  amount: bigint,
+  currency: string,
+  rateToUsd: Rational,
+  mode: RoundingMode = "floor",
+): bigint {
+  return convertUnits(amount, minorUnits(currency), rateToUsd, 6, mode);
+}
+
+/**
+ * Parses JSON keeping every number as its exact source text (a decimal string), so feed prices
+ * such as CoinGecko's never pass through a float. Uses the JSON.parse source-text access of
+ * Node ≥ 21 (`context.source`); throws if the runtime lacks it rather than silently losing digits.
+ */
+export function parseJsonDecimals(text: string): unknown {
+  const reviver = (_key: string, v: unknown, ctx?: { source?: string }): unknown => {
+    if (typeof v !== "number") return v;
+    if (!ctx || typeof ctx.source !== "string") throw new Error("JSON.parse source text access is unavailable");
+    return ctx.source;
+  };
+  return JSON.parse(text, reviver as (key: string, value: unknown) => unknown);
 }

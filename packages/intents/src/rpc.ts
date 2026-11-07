@@ -69,7 +69,12 @@ export interface ExecuteResult {
   logs: string[];
   intentsExecuted: IntentExecuted[];
   gasBurnt: bigint;
+  /** Hash of the block that included the transaction (`transaction_outcome.block_hash`), when the RPC returns it. */
+  blockHash?: string;
 }
+
+/** `send_tx` / `tx_status` wait levels (NEAR JSON-RPC `wait_until`). */
+export type TxWaitUntil = "INCLUDED" | "INCLUDED_FINAL" | "EXECUTED_OPTIMISTIC" | "EXECUTED" | "FINAL";
 
 export interface RelayerSigner {
   accountId: string;
@@ -198,7 +203,30 @@ export function intentsRpc(opts: IntentsRpcOptions) {
       return { txHash: bs58.encode(hash), bytes: signedTx.encode(), nonce };
     },
 
-    /** Submits `execute_intents` and waits for finality (default 10 s). */
+    /**
+     * Sends an already-signed transaction (from `buildExecuteTx`) and waits (default `FINAL`, 10 s).
+     * The caller stores `txHash` before sending, so a timeout (RpcError) never loses the hash: poll
+     * `txStatus(txHash, sender)` afterwards (agentpay §7; CR-15-16). Resending the same bytes is safe
+     * (same hash). The outcome carries `blockHash` of the including block.
+     */
+    async sendSignedTx(p: {
+      bytes: Uint8Array;
+      txHash: string;
+      waitUntil?: TxWaitUntil;
+      timeoutMs?: number;
+    }): Promise<ExecuteResult> {
+      const outcome = (await call(
+        "send_tx",
+        { signed_tx_base64: toBase64(p.bytes), wait_until: p.waitUntil ?? "FINAL" },
+        p.timeoutMs ?? 10_000,
+      )) as FinalOutcome;
+      const id = outcome?.transaction_outcome?.id;
+      if (id !== undefined && id !== p.txHash)
+        throw new RpcError(`send_tx returned outcome of ${id}, expected ${p.txHash}`);
+      return summarize(p.txHash, outcome);
+    },
+
+    /** Submits `execute_intents` and waits for finality (default 10 s). Loses nothing only if the caller does not need the hash on timeout; prefer `buildExecuteTx` + `sendSignedTx`. */
     async executeIntents(p: {
       signed: readonly MultiPayload[];
       signer: RelayerSigner;
@@ -206,12 +234,7 @@ export function intentsRpc(opts: IntentsRpcOptions) {
       timeoutMs?: number;
     }): Promise<ExecuteResult> {
       const { txHash, bytes } = await this.buildExecuteTx(p.signed, p.signer, p.gas);
-      const outcome = (await call(
-        "send_tx",
-        { signed_tx_base64: toBase64(bytes), wait_until: "FINAL" },
-        p.timeoutMs ?? 10_000,
-      )) as FinalOutcome;
-      return summarize(txHash, outcome);
+      return this.sendSignedTx({ bytes, txHash, timeoutMs: p.timeoutMs });
     },
 
     /** Final status of a submitted transaction. */
@@ -228,7 +251,7 @@ export function intentsRpc(opts: IntentsRpcOptions) {
 
 interface FinalOutcome {
   status: { SuccessValue?: string; Failure?: unknown };
-  transaction_outcome: { outcome: { gas_burnt: number | string; logs: string[] } };
+  transaction_outcome: { id?: string; block_hash?: string; outcome: { gas_burnt: number | string; logs: string[] } };
   receipts_outcome: { outcome: { gas_burnt: number | string; logs: string[]; status: { Failure?: unknown } } }[];
 }
 
@@ -246,6 +269,7 @@ function summarize(txHash: string, o: FinalOutcome): ExecuteResult {
     logs,
     intentsExecuted: intentsExecuted(logs),
     gasBurnt,
+    ...(o.transaction_outcome.block_hash ? { blockHash: o.transaction_outcome.block_hash } : {}),
   };
 }
 

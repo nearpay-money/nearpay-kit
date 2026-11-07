@@ -224,7 +224,8 @@ export interface Service {
 // ---------------------------------------------------------------------------------------------
 
 const TOKENLESS = new Set(["anonymous", "client_secret", "gateway", "internal", "service_client"]);
-const BUDGET_MS = { public: 10_000, internal: 5_000 } as const;
+/** Ops (console) routes are gateway-routed and operator-facing like public ones. */
+const BUDGET_MS = { public: 10_000, internal: 5_000, ops: 10_000 } as const;
 const MAX_IDEMPOTENCY_KEY = 255;
 
 interface RequestState {

@@ -204,6 +204,12 @@ function queryString(q: RequestOptions["query"]): string {
   return s ? `?${s}` : "";
 }
 
+/** Drops a caller-supplied `X-NearPay-Token` (case-insensitive): route calls authenticate as the client. */
+function withoutTokenHeader(h: Record<string, string>): Record<string, string> {
+  const token = HEADERS.token.toLowerCase();
+  return Object.fromEntries(Object.entries(h).filter(([k]) => k.toLowerCase() !== token));
+}
+
 export function httpClient(opts: HttpClientOptions) {
   const f = opts.fetch ?? fetch;
   const now = opts.now ?? Date.now;
@@ -309,7 +315,11 @@ export function httpClient(opts: HttpClientOptions) {
       throw last;
     },
 
-    /** Calls a spec route, validating the response against its schema. */
+    /**
+     * Calls a spec route, validating the response against its schema. `headers` adds request
+     * headers the route declares (e.g. `X-NearPay-Client-Secret` forwarded by agentpay, CR-15-16);
+     * they never replace the auth token set by the client.
+     */
     async call<R extends AnyRoute>(
       route: R,
       p: {
@@ -318,6 +328,7 @@ export function httpClient(opts: HttpClientOptions) {
         body?: unknown;
         idempotencyKey?: string;
         timeoutMs?: number;
+        headers?: Record<string, string>;
       } = {},
     ): Promise<RouteResponse<R>> {
       const res = await this.request({
@@ -327,6 +338,7 @@ export function httpClient(opts: HttpClientOptions) {
         body: p.body,
         idempotencyKey: p.idempotencyKey,
         timeoutMs: p.timeoutMs,
+        headers: p.headers ? withoutTokenHeader(p.headers) : undefined,
       });
       if (!route.response) return undefined as RouteResponse<R>;
       return route.response.parse(res.body) as RouteResponse<R>;
