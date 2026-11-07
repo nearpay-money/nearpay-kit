@@ -258,11 +258,20 @@ body {
   font-size: 12px;
   color: var(--np-color-text-secondary);
 }
+/* Activity beside a 416 px card (Figma); the card wraps below when the activity column would drop under 280 px. */
 .g-detail {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 416px;
+  display: flex;
+  flex-wrap: wrap;
   gap: 48px;
-  align-items: start;
+  align-items: flex-start;
+}
+.g-detail > section {
+  flex: 1 1 280px;
+  min-width: 0;
+}
+.g-detail__card {
+  flex: 0 1 416px;
+  min-width: 0;
 }
 .g-kv-strong .np-kv__value {
   font-weight: 500;
@@ -328,9 +337,14 @@ body {
 }
 .g-money-table th,
 .g-money-table td {
+  overflow-wrap: anywhere;
   text-align: left;
   padding: 8px 12px;
   border-bottom: 1px solid var(--np-color-border);
+}
+/* The 24-decimal (1 yocto) example must wrap inside a half-width panel instead of overflowing it. */
+.g-money-table .np-money {
+  white-space: normal;
 }
 .g-money-table th {
   font-weight: 400;
@@ -446,6 +460,7 @@ body {
 }
 .g-range {
   width: 100%;
+  margin-inline: 0;
   accent-color: var(--np-color-accent);
 }
 

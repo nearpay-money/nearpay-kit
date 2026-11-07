@@ -930,9 +930,15 @@
     letter-spacing: var(--np-tracking-amount);
   }
 
+  /*
+   * Stat columns may shrink below their content (never wider than the row: `min(200px, 100%)` and
+   * `min-width: 0`). Long values never overflow their column: below 180 px the value steps down
+   * to h3, below 140 px to h4; the suffix symbol may wrap under the number, and as a last resort
+   * an unbreakable value breaks anywhere (e.g. a 24-decimal amount).
+   */
   .np-stat-group {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(min(200px, 100%), 1fr));
     gap: var(--np-space-6);
     margin: 0;
   }
@@ -940,6 +946,8 @@
     display: flex;
     flex-direction: column;
     min-width: 0;
+    container: np-stat / inline-size;
+    overflow-wrap: anywhere;
   }
   .np-stat__label {
     font-size: var(--np-text-small);
@@ -954,6 +962,23 @@
     letter-spacing: var(--np-tracking-heading);
     font-variant-numeric: tabular-nums;
     color: var(--np-color-text);
+  }
+  .np-stat__value .np-money {
+    font-size: inherit;
+    line-height: inherit;
+    white-space: normal;
+  }
+  @container np-stat (width < 180px) {
+    .np-stat__value {
+      font-size: var(--np-text-h3);
+      line-height: 32px;
+    }
+  }
+  @container np-stat (width < 140px) {
+    .np-stat__value {
+      font-size: var(--np-text-h4);
+      line-height: 28px;
+    }
   }
   .np-stat__sub {
     margin-top: var(--np-space-2);
