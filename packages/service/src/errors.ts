@@ -95,13 +95,18 @@ function idempotencyCode(e: unknown): "idempotency_in_progress" | "idempotency_k
   return null;
 }
 
+/** Placeholder values for AuthError codes whose catalogue message has one. */
+const AUTH_ERROR_PARAMS = { action: "perform this action" } as const;
+
 /** Maps any thrown value to a status, envelope and headers. */
 export function toErrorResponse(e: unknown, requestId: string): MappedError {
   let err: ApiError;
   let unexpected = false;
   const idem = idempotencyCode(e);
   if (e instanceof ApiError) err = e;
-  else if (e instanceof AuthError) err = new ApiError(e.code);
+  // AuthError's own message is internal detail (scopes, roles, route ids): render the catalogue text, with a
+  // neutral value for its placeholder (`permission_denied`: "…not allowed to {action}.").
+  else if (e instanceof AuthError) err = new ApiError(e.code, { params: AUTH_ERROR_PARAMS });
   else if (idem)
     err = new ApiError(idem, idem === "idempotency_in_progress" ? { headers: { "Retry-After": "1" } } : {});
   else {

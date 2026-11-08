@@ -79,7 +79,10 @@ describe("toErrorResponse", () => {
 
   it("maps authentication and idempotency failures", () => {
     expect(valid(toErrorResponse(new AuthError("step_up_required", "x"), RID)).status).toBe(401);
-    expect(valid(toErrorResponse(new AuthError("permission_denied", "x"), RID)).status).toBe(403);
+    const denied = valid(toErrorResponse(new AuthError("permission_denied", "ops role ops may not call x"), RID));
+    expect(denied.status).toBe(403);
+    // no unrendered `{placeholder}` and no internal detail in the public message
+    expect(denied.envelope.error.message).toBe("This credential is not allowed to perform this action.");
     expect(valid(toErrorResponse(new AuthError("authentication_required", "x"), RID)).status).toBe(401);
     const busy = valid(toErrorResponse(new IdempotencyConflict("idempotency_in_progress"), RID));
     expect([busy.status, busy.headers["Retry-After"], busy.envelope.error.type]).toEqual([
