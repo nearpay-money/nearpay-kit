@@ -1,6 +1,6 @@
 {
   "name": "@nearpay-internal/bus",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "NATS JetStream: connect, streams, durable consumers with backoff and dead letters, publish with de-duplication.",
   "license": "Apache-2.0",
   "type": "module",

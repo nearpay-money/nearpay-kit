@@ -3,6 +3,32 @@
 All packages in this repository share one version. Breaking changes bump the major version and
 carry a migration note here (semver, foundations §4).
 
+## 0.3.1 — 2026-11-08
+
+Patch release (Stage 3.2 change requests from webhooks and billing). No API removed or changed;
+packages still build against spec **0.3.0**.
+
+### service — SSE backpressure fixes
+
+- `SseStream.drain()` waits only while `res.writableNeedDrain` is true (the last write hit the
+  high-water mark). 0.3.0 waited while `writableLength > 0`. A small buffered amount below the
+  high-water mark never triggers `drain`, so the promise could hang forever.
+- Closing a stream with more than `maxBufferedBytes` unsent calls `res.destroy()` instead of
+  `res.end()`. This covers slow-client close, `maxDurationMs` and service shutdown. `end()` waited to
+  flush to a reader that never reads, which kept the socket open. Streams without `maxBufferedBytes`,
+  or within it, still end gracefully.
+- Regression tests: a real socket whose client stops reading (drain pending, then close destroys
+  the socket and releases drain); drain with small buffered data resolves at once.
+
+### service — binary responses
+
+- `binary(bytes, contentType, headers?)` / `ctx.binary(…)` return raw bytes from routes with a spec
+  `binaryResponse` (billing invoice PDFs, `application/pdf`). The body is sent with the route's
+  status, `x-request-id` and an exact `content-length`. The content type must match the route's
+  (media type only); a mismatch follows `responseValidation` (enforce → 500, log → logged). Returning
+  bytes from a route without `binaryResponse` is a 500. Binary responses bypass `Idempotency-Key`
+  storage. Handlers that write `ctx.reply` themselves (billing's 0.3.0 workaround) keep working.
+
 ## 0.3.0 — 2026-11-08
 
 Stage 3 step 3.1 (agent-commerce). Additive; minor bump because every package now builds against
