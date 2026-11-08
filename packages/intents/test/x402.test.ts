@@ -1,8 +1,10 @@
 /**
- * x402 `near-intents` helpers. Expected values are copied from nearpay-spec
- * `test-vectors/x402-near-intents.json` (spec 0.3.0); switch to `require.resolve("@nearpay/spec/test-vectors/…")`
- * once kit builds against spec 0.3.0.
+ * x402 `near-intents` helpers against nearpay-spec `test-vectors/x402-near-intents.json` and the spec's
+ * own `parseOperationToken` / `quotedRequirements`. Negative cases stay inline.
  */
+import { readFileSync } from "node:fs";
+import { createRequire } from "node:module";
+import { NearIntentsQuote, parseOperationToken, quotedRequirements } from "@nearpay/spec";
 import { describe, expect, it } from "vitest";
 import {
   jcs,
@@ -13,39 +15,17 @@ import {
   verifyOperationToken,
 } from "../src/index.js";
 
-const BINDING_INPUT: NearIntentsBindingInput = {
-  method: "near-intents",
-  account_id: "acct_01jbz9k3m4n5p6q7r8s9t0v1w2",
-  resource_url: "https://merchant.example/premium",
-  origin_network: "eip155:8453",
-  origin_asset_id: "nep141:base-0x833589fcd6edb6e08f4c7c32d4f71b54bda02913.omft.near",
-  pay_to: "merchant.near",
-  asset_id: "nep141:17208628f84f5d6ad33f0da3bbbeb27ffcb398eac501a31bd6ad2011e36133a1",
-  amount: "1000000",
-  max_timeout_s: 1800,
-  nonce16: "361441f00c324e2775626d50b2489734",
-  expires_at: 1794132300,
-};
-const BINDING = "np1:FkMXJmBuTZEMpEvn6a6VRVGugj435HBY98sUfKJhinuj";
-const KEY = Uint8Array.from(Buffer.from("db903712fdfd9030c4c5299fe1402a9d9b8541072b60f6bf56db8952381f6a4f", "hex"));
-const TOKEN_INPUT: OperationTokenInput = {
-  v: 1,
-  binding: BINDING,
-  network: "eip155:8453",
-  deposit_address: "0x76b4c56085ED136a8744D52bE956396624a730E8",
-  deposit_memo: null,
-  resource_url: "https://merchant.example/premium",
-  destination: {
-    network: "near:mainnet",
-    asset: "nep141:17208628f84f5d6ad33f0da3bbbeb27ffcb398eac501a31bd6ad2011e36133a1",
-    amount: "1000000",
-    recipient: "merchant.near",
-  },
-  expiry: 1794220320,
-};
-const TOKEN = "k1.1794220320.HlEcLQKWz-n8v36o4oNNsu7grADXll7PBNhbvxspJDI";
+const require = createRequire(import.meta.url);
+const V = JSON.parse(readFileSync(require.resolve("@nearpay/spec/test-vectors/x402-near-intents.json"), "utf8"));
+
+const BINDING_INPUT: NearIntentsBindingInput = V.binding.input;
+const BINDING: string = V.binding.binding;
+const KID: string = V.operation_token.kid;
+const KEY = Uint8Array.from(Buffer.from(V.operation_token.key_hex, "hex"));
+const TOKEN_INPUT: OperationTokenInput = V.operation_token.input;
+const TOKEN: string = V.operation_token.token;
 const { expiry: _expiry, ...RECOMPUTED } = TOKEN_INPUT;
-const keys = new Map([["k1", KEY]]);
+const keys = new Map([[KID, KEY]]);
 
 describe("jcs", () => {
   it("sorts keys recursively and keeps null", () => {
@@ -60,6 +40,7 @@ describe("jcs", () => {
 
 describe("near-intents binding", () => {
   it("reproduces the spec vector", () => {
+    expect(jcs(BINDING_INPUT)).toBe(V.binding.jcs);
     expect(nearIntentsBinding(BINDING_INPUT)).toBe(BINDING);
   });
   it("changes with every field", () => {
@@ -70,12 +51,13 @@ describe("near-intents binding", () => {
 
 describe("operation token", () => {
   it("mints the spec vector", () => {
-    expect(mintOperationToken(KEY, "k1", TOKEN_INPUT)).toBe(TOKEN);
+    expect(jcs(TOKEN_INPUT)).toBe(V.operation_token.jcs);
+    expect(mintOperationToken(KEY, KID, TOKEN_INPUT)).toBe(TOKEN);
   });
   it("verifies against the recomputed input", () => {
     expect(verifyOperationToken(TOKEN, keys, RECOMPUTED, TOKEN_INPUT.expiry - 1)).toEqual({
       ok: true,
-      kid: "k1",
+      kid: KID,
       expiry: TOKEN_INPUT.expiry,
     });
   });
@@ -96,15 +78,71 @@ describe("operation token", () => {
       { ...RECOMPUTED, deposit_memo: "1" },
       { ...RECOMPUTED, resource_url: "https://merchant.example/other" },
       { ...RECOMPUTED, destination: { ...RECOMPUTED.destination, amount: "999999" } },
-      { ...RECOMPUTED, binding: "np1:FkMXJmBuTZEMpEvn6a6VRVGugj435HBY98sUfKJhinuk" },
+      { ...RECOMPUTED, binding: `${BINDING.slice(0, -1)}${BINDING.endsWith("k") ? "j" : "k"}` },
     ];
     for (const c of changed) expect(verifyOperationToken(TOKEN, keys, c, now)).toMatchObject({ reason: "invalid" });
     // a later expiry in the token is a different MAC input
-    const forged = TOKEN.replace("1794220320", "1894220320");
+    const forged = TOKEN.replace(`.${TOKEN_INPUT.expiry}.`, `.${TOKEN_INPUT.expiry + 100_000_000}.`);
     expect(verifyOperationToken(forged, keys, RECOMPUTED, now)).toMatchObject({ reason: "invalid" });
   });
   it("refuses short keys and bad kids", () => {
-    expect(() => mintOperationToken(KEY.slice(0, 16), "k1", TOKEN_INPUT)).toThrow(RangeError);
+    expect(() => mintOperationToken(KEY.slice(0, 16), KID, TOKEN_INPUT)).toThrow(RangeError);
     expect(() => mintOperationToken(KEY, "K1", TOKEN_INPUT)).toThrow(RangeError);
+  });
+});
+
+describe("agrees with the spec helpers", () => {
+  const H = V.headers;
+  it("spec parseOperationToken splits a kit-minted token into the kit's kid, expiry and MAC", () => {
+    expect(parseOperationToken(mintOperationToken(KEY, KID, TOKEN_INPUT))).toEqual({
+      kid: KID,
+      expiry: TOKEN_INPUT.expiry,
+      mac: V.operation_token.mac,
+    });
+  });
+  it("kit treats a token as malformed exactly when the spec parser does", () => {
+    const now = TOKEN_INPUT.expiry - 10;
+    const candidates = [
+      TOKEN,
+      "k1.x.y",
+      `K1${TOKEN.slice(2)}`,
+      `${"a".repeat(33)}${TOKEN.slice(2)}`,
+      `${TOKEN}A`,
+      TOKEN.slice(0, -1),
+      TOKEN.replace(`.${TOKEN_INPUT.expiry}.`, ".1234567890123."),
+      TOKEN.replace(`.${TOKEN_INPUT.expiry}.`, ".-1."),
+      "",
+    ];
+    for (const t of candidates) {
+      const kitMalformed =
+        (verifyOperationToken(t, keys, RECOMPUTED, now) as { reason?: string }).reason === "malformed";
+      expect(kitMalformed, t).toBe(parseOperationToken(t) === null);
+    }
+  });
+  it("the unquoted entry carries the kit binding; spec quotedRequirements with the kit token gives the quoted vector", () => {
+    const unquoted = H.payment_required_unquoted.accepts[0];
+    expect(unquoted.extra.binding).toBe(nearIntentsBinding(BINDING_INPUT));
+    const quote = NearIntentsQuote.parse({
+      ...H.verify_response_quote.extra,
+      operationToken: mintOperationToken(KEY, KID, TOKEN_INPUT),
+    });
+    expect(quotedRequirements(unquoted, quote)).toEqual(H.payment_required_quoted.accepts[0]);
+    // the facilitator recomputes the token input from the quoted entry and verifies the kit token
+    const quoted = H.payment_required_quoted.accepts[0];
+    const recomputed = {
+      v: 1 as const,
+      binding: quoted.extra.binding,
+      network: quoted.network,
+      deposit_address: quoted.payTo,
+      deposit_memo: quoted.extra.depositMemo ?? null,
+      resource_url: H.payment_required_quoted.resource.url,
+      destination: quoted.extra.destination,
+    };
+    const parsed = parseOperationToken(quoted.extra.operationToken);
+    expect(verifyOperationToken(quoted.extra.operationToken, keys, recomputed, (parsed?.expiry ?? 0) - 1)).toEqual({
+      ok: true,
+      kid: KID,
+      expiry: TOKEN_INPUT.expiry,
+    });
   });
 });

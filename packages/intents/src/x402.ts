@@ -6,42 +6,23 @@
  * - `operationToken` = `<kid>.<expiry>.<mac>`, mac = unpadded base64url(HMAC-SHA256(key, JCS(input))).
  *
  * The inputs hold only strings, safe integers, null and nested objects, for which RFC 8785 (JCS) is
- * JSON with lexicographically sorted keys; `jcs()` refuses anything else. Types mirror the spec 0.3.0
- * schemas (kit 0.2.x builds against spec 0.2.1, which does not have them yet).
+ * JSON with lexicographically sorted keys; `jcs()` refuses anything else. The input types are the spec
+ * schemas' output types; results are cross-checked against the spec's `parseOperationToken` and
+ * `quotedRequirements` in the tests.
  */
+import type { X402NearIntentsBindingInput, X402OperationTokenInput, z } from "@nearpay/spec";
 import { hmac } from "@noble/hashes/hmac.js";
 import { sha256 } from "@noble/hashes/sha2.js";
 import bs58 from "bs58";
 
-export interface NearIntentsBindingInput {
-  readonly method: "near-intents";
-  readonly account_id: string;
-  readonly resource_url: string;
-  readonly origin_network: string;
-  readonly origin_asset_id: string;
-  readonly pay_to: string;
-  readonly asset_id: string;
-  readonly amount: string;
-  readonly max_timeout_s: number;
-  readonly nonce16: string;
-  readonly expires_at: number;
-}
+/** Drops the index signature a zod loose object adds, keeping the declared fields (so `Omit` works). */
+type Declared<T> = { readonly [K in keyof T as string extends K ? never : K]: T[K] };
 
-export interface OperationTokenInput {
-  readonly v: 1;
-  readonly binding: string;
-  readonly network: string;
-  readonly deposit_address: string;
-  readonly deposit_memo: string | null;
-  readonly resource_url: string;
-  readonly destination: {
-    readonly network: string;
-    readonly asset: string;
-    readonly amount: string;
-    readonly recipient: string;
-  };
-  readonly expiry: number;
-}
+/** Spec `X402NearIntentsBindingInput` (declared fields). */
+export type NearIntentsBindingInput = Declared<z.output<typeof X402NearIntentsBindingInput>>;
+
+/** Spec `X402OperationTokenInput` (declared fields). */
+export type OperationTokenInput = Declared<z.output<typeof X402OperationTokenInput>>;
 
 type Json = string | number | null | { readonly [k: string]: Json };
 

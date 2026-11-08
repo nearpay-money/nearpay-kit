@@ -21,7 +21,13 @@ export interface SseStream<E extends string = string> {
   drain(): Promise<void>;
 }
 
-/** Limits for long-lived streams (webhooks event stream, lld/webhooks.md §5.1). All optional. */
+/**
+ * Limits for long-lived streams (webhooks event stream, lld/webhooks.md §5.1). All optional and
+ * parametric: the service passes them. For the webhooks event stream the spec (0.3.0) exports the
+ * contract values — `EVENT_STREAM_MAX_SECONDS` (→ `maxDurationMs`), `EVENT_STREAM_MAX_CONCURRENT`
+ * (enforced by the service, not here), and `EVENT_STREAM_HEARTBEAT_S` / `EVENT_STREAM_RETRY_MS`,
+ * which already reach `openSse` through the route's `stream` definition.
+ */
 export interface SseLimits {
   /** Close the stream after this long (clients reconnect with `Last-Event-ID`). */
   readonly maxDurationMs?: number;
