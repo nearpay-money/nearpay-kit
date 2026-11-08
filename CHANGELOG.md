@@ -3,6 +3,26 @@
 All packages in this repository share one version. Breaking changes bump the major version and
 carry a migration note here (semver, foundations §4).
 
+## Unreleased
+
+### stage 3 — agent-commerce (step 3.1)
+
+Additive; no version bump (the lead releases with spec 0.3.0).
+
+- `@nearpay-internal/service`: `openSse(res, def, headers, limits?)` and `ctx.sse(limits?)` take
+  optional `SseLimits {maxDurationMs, maxBufferedBytes, slowClientMs}` — the stream closes itself
+  after `maxDurationMs` and closes a client that keeps more than `maxBufferedBytes` unsent for
+  `slowClientMs` (default 30 s; checked on each heartbeat). `SseStream.buffered` and
+  `SseStream.drain()` let a replaying producer wait for the socket. `resumeCursor(headers, query?)`:
+  `Last-Event-ID` wins over `starting_after`. For the webhooks event stream (lld/webhooks.md §5.1).
+- `@nearpay-internal/intents`: x402 `near-intents` helpers for agentpay (lld/agentpay.md §3.1) —
+  `nearIntentsBinding(input)` (`np1:` + base58(sha256(JCS))), `mintOperationToken(key, kid, input)`
+  and `verifyOperationToken(token, keys, input, now)` (`<kid>.<expiry>.<HMAC-SHA256 over JCS>`,
+  expiry checked before the key, constant-time MAC compare; reasons `malformed`, `expired`,
+  `unknown_key`, `invalid`), and `jcs()` for string/integer/null/object values. Types mirror spec
+  0.3.0 `X402NearIntentsBindingInput` / `X402OperationTokenInput`; tests reproduce the spec vectors
+  `test-vectors/x402-near-intents.json` (copied inline until kit builds against spec 0.3.0).
+
 ## 0.2.1 — 2026-11-08
 
 Stage 2 follow-up. Additive except the **`NP_ENV` behaviour change** below (deliberately shipped in

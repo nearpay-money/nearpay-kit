@@ -42,7 +42,7 @@ import { ApiError, fromZodError, toErrorResponse } from "./errors.js";
 import { createLogger, type Logger } from "./logger.js";
 import { createMetrics, type ServiceMetrics, serveMetrics } from "./metrics.js";
 import { parseQuery } from "./query.js";
-import { openSse, type SseStream } from "./sse.js";
+import { openSse, type SseLimits, type SseStream } from "./sse.js";
 import { formatTraceparent, SpanKind, SpanStatusCode, startSpan, startTracing, type Tracing } from "./tracing.js";
 
 // ---------------------------------------------------------------------------------------------
@@ -86,8 +86,8 @@ export interface RequestContext<R extends AnyRoute = AnyRoute> {
   readonly span: Span;
   readonly request: FastifyRequest;
   readonly reply: FastifyReply;
-  /** Opens the route's server-sent-event stream (routes with `stream` only). */
-  sse(): SseStream<RouteEvents<R>>;
+  /** Opens the route's server-sent-event stream (routes with `stream` only); `limits` on the first call only. */
+  sse(limits?: SseLimits): SseStream<RouteEvents<R>>;
 }
 
 const RESPONDED = Symbol("nearpay.responded");
@@ -580,11 +580,11 @@ export function createService(o: ServiceOptions): Service {
             span: st.span,
             request: req,
             reply,
-            sse() {
+            sse(limits?: SseLimits) {
               if (!route.stream) throw new Error(`${route.id} is not a streaming route`);
               if (sse) return sse;
               reply.hijack();
-              const s = openSse(reply.raw, route.stream, { [HEADERS.requestId]: req.id });
+              const s = openSse(reply.raw, route.stream, { [HEADERS.requestId]: req.id }, limits);
               sse = s;
               streams.add(s);
               s.onClose(() => {

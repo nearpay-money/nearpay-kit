@@ -51,7 +51,7 @@ export {
   type ServiceOptions,
   unimplementedRoutes,
 } from "./service.js";
-export { openSse, type SseStream } from "./sse.js";
+export { openSse, resumeCursor, type SseLimits, type SseStream } from "./sse.js";
 export {
   formatTraceparent,
   parseTraceparent,
