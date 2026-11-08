@@ -3,6 +3,77 @@
 All packages in this repository share one version. Breaking changes bump the major version and
 carry a migration note here (semver, foundations §4).
 
+## 0.2.1 — 2026-11-08
+
+Stage 2 follow-up. Additive except the **`NP_ENV` behaviour change** below (deliberately shipped in
+a patch on the lead's call: it only affects processes that were started without `NP_ENV`, which is
+the misconfiguration being closed).
+
+### spec 0.2.1
+
+- Every package depends on `@nearpay/spec` / `@nearpay-internal/spec` **0.2.1** (additive builders'
+  change requests). No kit code change was needed.
+
+### service / testing — `NP_ENV` is required (audit finding 2 follow-up)
+
+- **Behaviour change:** `@nearpay-internal/service` `baseConfigShape.env` no longer defaults to
+  `local`. A process started without `NP_ENV` (or with an empty value) now fails at boot with
+  `ConfigError`: `NP_ENV: is required — set it explicitly to one of local, server, test (there is no
+  default; local/test enable development relaxations)`; `runMain` exits 1. Previously such a server
+  silently got the development relaxations of `local`.
+- New `isDevEnv(env)` — true only for `local` and `test` (anything else, including unknown or
+  missing values, is treated as a real deployment). Services gate dev relaxations with it instead of
+  comparing `config.env` by hand. Also exported: `ENVS`, type `Env`.
+- `@nearpay-internal/testing`: `testEnv(vars)` (`NP_ENV=test` plus the given `NP_*` variables; refuses
+  any other `NP_ENV`), `testConfig(overrides)` (a `BaseConfig` with `env: "test"`, silent logs,
+  ephemeral loopback ports), `TEST_ENV`; `mockPeer` uses `testConfig()`.
+- **Migration:** `nearpay-deploy` sets `NP_ENV` explicitly in every Compose profile (`local` for the
+  laptop stack, `server` for the host). Testcontainers images of a service and test helpers that call
+  `loadConfig`/`runMain` must pass `NP_ENV=test` (`testEnv()`); in-process `createService` tests can
+  use `testConfig()`.
+
+### ui — gaps reported by the Stage 2 UI builders
+
+- New components: `Textarea`; `FieldError` and field-level error state (`Field error={true}` marks a
+  field invalid without its own message; controls get `aria-errormessage`; composite controls inside an
+  invalid field get the danger border); `ErrorState` (title, message, retry with busy state, reference;
+  `role="alert"`); `CopyText` (short value + copy, polite announcement, selects the text on failure)
+  and `IdText` (monospace id with copy, optional middle truncation that still reads/copies the full
+  id); `Popover` (non-modal, CSS-positioned); `Menu` / `MenuButton` (WAI-ARIA menu button: arrows,
+  Home/End, type-ahead, Esc/Tab, radio/checkbox items, link items via `renderLink`); `FilterBar` +
+  `FilterPill` (select-style button `np-select-button`, active style when not at its default);
+  `OptionButton` (option-card row that is a button); `StateScreen` (icon, title, lede, badge, callout
+  with reference, actions); `PageLayout`, `Section`, `TwoColumnLayout` (form + side panel; container
+  query on the outer element); `LineChart` (dependency-free SVG; values are bigint/integer strings,
+  scaled with bigint arithmetic and converted to pixels for display only; nice whole-unit ticks via
+  `formatMoney`; crosshair + tooltip on hover and ←/→/Home/End; hidden data table; 1–4 series with a
+  validated categorical palette `--np-chart-1…4` / `chart` token, legend for ≥ 2 series).
+- `Modal` stacking: open modals form a layer stack (`pushLayer`, `openLayerCount`, `topLayerId`);
+  z-index via the CSSOM custom property `--np-layer` (CSP-safe); only the topmost modal handles Esc and
+  Tab; the scroll lock lasts until the last one closes; `priority="step-up"` always sits above every
+  other open modal.
+- `Table`: `renderLink` (`LinkRenderer`) for SPA row links; the scroll container is
+  `position: relative` so row-link overlays stay inside it. `Breadcrumb` also takes `renderLink`.
+- `StatGroup`: column minimum `min(100%, 200px)` (overridable with `--np-stat-min`).
+- `AppShell`: the sidebar colour runs the full page height (painted by the shell grid, not the sticky
+  sidebar); controlled `navOpen` / `onNavOpenChange`; `onNavigate(item, event)` (drawer closes after
+  navigation); `renderLink` for nav and footer links; `footerActions` slot (Sign out); workspace
+  switcher in menu mode (`workspace.menu`), button mode (`onSwitch`) or — with neither — a static,
+  non-interactive label (was a button that did nothing); `modeSwitch` slot replaces the static pill.
+- `CheckoutFrame`: desktop background fixed — a container query cannot style its own container, so
+  the background moved to a new `.np-checkout__canvas` child; `data-testid` pass-through. Also
+  `CopyField`, `Combobox`, `Modal`, `Table` pass `data-testid` through.
+- `Combobox`: `beforeList` slot between the search box and the list.
+- Icons: geometry moved to `icons/shapes.ts`; new `RefreshIcon`, `LogOutIcon`, `MoreIcon`; React-free
+  subpath **`@nearpay-internal/ui/icons-svg`** (`iconSvg(name, {size, title, className})`,
+  `ICON_NAMES`, `ICON_SHAPES`) renders the same icons as SVG strings for Astro/static pages.
+- **`@nearpay-internal/ui/money`**: React-free subpath export for `formatMoney` & co.
+- Optional **`@nearpay-internal/ui/prose.css`**: long-form text (`np-prose`), code blocks
+  (`np-codeblock`), table of contents (`np-toc`).
+- Tokens: `--np-z-popover`, `--np-chart-1…4` (light/dark/auto) mirrored by `chart` in `tokens.ts`.
+- Gallery: entries for every new component; Ref B uses `LineChart`, the menu workspace switcher and
+  Sign out; checkout result states use `StateScreen`.
+
 ## 0.2.0 — 2026-11-07
 
 Stage 2 kit release (step 2.1). Additive except the ops-principal tightening below (a 0.x minor;
