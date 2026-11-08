@@ -36,6 +36,8 @@ export interface CheckoutFrameProps {
   /** Footer links; items without an href are omitted. */
   links?: { help?: string; privacy?: string; terms?: string };
   className?: string;
+  /** Passed through to the root element. */
+  "data-testid"?: string;
   children: ReactNode;
 }
 
@@ -65,6 +67,7 @@ export function CheckoutFrame({
   variant = "page",
   links = {},
   className,
+  "data-testid": testId,
   children,
 }: CheckoutFrameProps) {
   const bannerNode =
@@ -84,51 +87,55 @@ export function CheckoutFrame({
         summary != null && "np-checkout--with-summary",
         className,
       )}
+      data-testid={testId}
     >
-      <div className="np-checkout__inner">
-        <div className="np-checkout__topbar">
-          <span className="np-checkout__brand">
-            <NearPayLogo />
-          </span>
-          {onBack ? <BackButton onBack={onBack} label={backLabel} /> : <span />}
-          <span className="np-checkout__secure">{secureLabel}</span>
-        </div>
-        {bannerNode ? <div className="np-checkout__banner">{bannerNode}</div> : null}
-        {hasHeader || summary ? (
-          <section className="np-checkout__summary" aria-label="Order summary">
-            {onBack && merchant ? (
-              <span className="np-checkout__back-wide">
-                <BackButton onBack={onBack} label={`Back to ${merchant.name}`} />
-              </span>
-            ) : null}
-            {merchant ? (
-              <div className="np-checkout__merchant">
-                <Avatar initial={merchant.initial ?? merchant.name} shape="square" size="lg" />
-                <div className="np-checkout__merchant-text">
-                  <p className="np-checkout__merchant-name">{merchant.name}</p>
-                  {merchant.subtitle ? <p className="np-checkout__merchant-sub">{merchant.subtitle}</p> : null}
+      {/* The root is the size container; the canvas paints the background so container queries can restyle it. */}
+      <div className="np-checkout__canvas">
+        <div className="np-checkout__inner">
+          <div className="np-checkout__topbar">
+            <span className="np-checkout__brand">
+              <NearPayLogo />
+            </span>
+            {onBack ? <BackButton onBack={onBack} label={backLabel} /> : <span />}
+            <span className="np-checkout__secure">{secureLabel}</span>
+          </div>
+          {bannerNode ? <div className="np-checkout__banner">{bannerNode}</div> : null}
+          {hasHeader || summary ? (
+            <section className="np-checkout__summary" aria-label="Order summary">
+              {onBack && merchant ? (
+                <span className="np-checkout__back-wide">
+                  <BackButton onBack={onBack} label={`Back to ${merchant.name}`} />
+                </span>
+              ) : null}
+              {merchant ? (
+                <div className="np-checkout__merchant">
+                  <Avatar initial={merchant.initial ?? merchant.name} shape="square" size="lg" />
+                  <div className="np-checkout__merchant-text">
+                    <p className="np-checkout__merchant-name">{merchant.name}</p>
+                    {merchant.subtitle ? <p className="np-checkout__merchant-sub">{merchant.subtitle}</p> : null}
+                  </div>
                 </div>
-              </div>
-            ) : null}
-            {amount ? <p className="np-checkout__amount">{amount}</p> : null}
-            {summary ? <div className="np-checkout__details">{summary}</div> : null}
+              ) : null}
+              {amount ? <p className="np-checkout__amount">{amount}</p> : null}
+              {summary ? <div className="np-checkout__details">{summary}</div> : null}
+            </section>
+          ) : null}
+          <section className="np-checkout__main">
+            <div className="np-checkout__flow">{children}</div>
+            <footer className="np-checkout__footer">
+              <p className="np-checkout__secured">Secured by NearPay</p>
+              {linkItems.length > 0 ? (
+                <ul className="np-checkout__links">
+                  {linkItems.map(([label, href]) => (
+                    <li key={label}>
+                      <a href={href}>{label}</a>
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+            </footer>
           </section>
-        ) : null}
-        <section className="np-checkout__main">
-          <div className="np-checkout__flow">{children}</div>
-          <footer className="np-checkout__footer">
-            <p className="np-checkout__secured">Secured by NearPay</p>
-            {linkItems.length > 0 ? (
-              <ul className="np-checkout__links">
-                {linkItems.map(([label, href]) => (
-                  <li key={label}>
-                    <a href={href}>{label}</a>
-                  </li>
-                ))}
-              </ul>
-            ) : null}
-          </footer>
-        </section>
+        </div>
       </div>
     </div>
   );

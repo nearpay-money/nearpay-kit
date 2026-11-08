@@ -3,6 +3,7 @@ import { cx } from "../cx.js";
 import { ArrowLeftIcon, ArrowRightIcon } from "../icons/index.js";
 import { Button } from "./Button.js";
 import { Skeleton } from "./Display.js";
+import { type LinkRenderer, renderAnchor } from "./Link.js";
 
 export interface TableColumn<T> {
   key: string;
@@ -27,6 +28,8 @@ export interface TableProps<T> {
   rowKey: (row: T) => string;
   /** Makes the primary cell a link that covers the whole row (hover + keyboard friendly). */
   rowHref?: (row: T) => string | undefined;
+  /** Renders row links, e.g. with the app router's `<Link>` (client-side navigation). */
+  renderLink?: LinkRenderer;
   loading?: boolean;
   /** Skeleton rows while loading. Default 3. */
   loadingRows?: number;
@@ -35,6 +38,7 @@ export interface TableProps<T> {
   /** Footer (e.g. `<Pager>`). */
   footer?: ReactNode;
   className?: string;
+  "data-testid"?: string;
 }
 
 /** Dense data table: muted header, 56 px rows, row hover, loading and empty states. */
@@ -45,11 +49,13 @@ export function Table<T>({
   rows,
   rowKey,
   rowHref,
+  renderLink = renderAnchor,
   loading = false,
   loadingRows = 3,
   empty,
   footer,
   className,
+  "data-testid": testId,
 }: TableProps<T>) {
   const colClass = (c: TableColumn<T>) =>
     cx(
@@ -61,7 +67,7 @@ export function Table<T>({
     );
   const showEmpty = !loading && rows.length === 0;
   return (
-    <div className={cx("np-table-wrap", className)}>
+    <div className={cx("np-table-wrap", className)} data-testid={testId}>
       <div className="np-table-scroll">
         <table className="np-table" aria-busy={loading || undefined}>
           <caption className={cx("np-table__caption", !showCaption && "np-sr-only")}>{caption}</caption>
@@ -92,13 +98,9 @@ export function Table<T>({
                     <tr key={rowKey(row)} className={cx("np-table__row", href && "np-table__row--link")}>
                       {columns.map((c) => (
                         <td key={c.key} className={colClass(c)}>
-                          {href && c.primary ? (
-                            <a href={href} className="np-table__link">
-                              {c.cell(row)}
-                            </a>
-                          ) : (
-                            c.cell(row)
-                          )}
+                          {href && c.primary
+                            ? renderLink({ href, className: "np-table__link", children: c.cell(row) })
+                            : c.cell(row)}
                         </td>
                       ))}
                     </tr>

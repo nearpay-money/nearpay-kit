@@ -12,6 +12,8 @@ import {
   Field,
   Input,
   KeyValueList,
+  LineChart,
+  LogOutIcon,
   Modal,
   Money,
   type NavGroup,
@@ -122,9 +124,26 @@ function nav(current: string): NavGroup[] {
 function Shell({ current, crumb, children }: { current: string; crumb: string; children: ReactNode }) {
   return (
     <AppShell
-      workspace={{ name: "Acme Studio", subtitle: "acme.studio" }}
+      workspace={{
+        name: "Acme Studio",
+        subtitle: "acme.studio",
+        menu: {
+          items: [
+            { id: "acme", label: "Acme Studio", description: "Owner" },
+            { id: "globex", label: "Globex Inc.", description: "Developer" },
+            { id: "s", separator: true },
+            { id: "new", label: "Create workspace" },
+          ],
+          onSelect: () => {},
+        },
+      }}
       nav={nav(current)}
       footerLinks={[{ label: "Help & support", href: "#help" }]}
+      footerActions={
+        <Button variant="ghost" size="sm" leadingIcon={<LogOutIcon size={16} />}>
+          Sign out
+        </Button>
+      }
       user={{ name: "Alex Morgan", role: "Owner" }}
       breadcrumb={<Breadcrumb items={[{ label: "Acme Studio", href: "#overview" }, { label: crumb }]} />}
       mode="live"
@@ -161,45 +180,17 @@ export const recentColumns: TableColumn<PaymentRow>[] = [
   { key: "received", header: "Received in", cell: (r) => r.received, hideOnNarrow: true },
 ];
 
-/** Static volume chart placeholder (SVG presentation attributes only — CSP-safe). */
 function VolumeChart() {
-  const pts = [
-    [0, 150],
-    [90, 140],
-    [170, 150],
-    [250, 98],
-    [330, 106],
-    [410, 70],
-    [490, 80],
-    [570, 54],
-    [650, 66],
-    [730, 30],
-    [810, 44],
-    [890, 24],
-    [970, 30],
-    [1050, 6],
-    [1120, 14],
-  ];
-  const labels = ["1 Nov", "2 Nov", "3 Nov", "4 Nov", "5 Nov", "6 Nov", "7 Nov"];
   return (
-    <figure className="g-chart">
-      <svg
-        viewBox="0 0 1120 168"
-        preserveAspectRatio="none"
-        className="g-chart__svg"
-        role="img"
-        aria-label="Payment volume, 1 to 7 November 2026, rising from about $2,000 to $5,400 a day"
-      >
-        <line x1="0" x2="1120" y1="70" y2="70" className="g-chart__grid" />
-        <line x1="0" x2="1120" y1="166" y2="166" className="g-chart__grid" />
-        <polyline points={pts.map((p) => p.join(",")).join(" ")} className="g-chart__line" />
-      </svg>
-      <div className="g-chart__axis" aria-hidden="true">
-        {labels.map((l) => (
-          <span key={l}>{l}</span>
-        ))}
-      </div>
-    </figure>
+    <LineChart
+      label="Payment volume, 1–7 November 2026"
+      labels={["1 Nov", "2 Nov", "3 Nov", "4 Nov", "5 Nov", "6 Nov", "7 Nov"]}
+      decimals={2}
+      symbol="$"
+      series={[
+        { id: "v", label: "Volume", values: ["201000", "248000", "231000", "352000", "337000", "418000", "540200"] },
+      ]}
+    />
   );
 }
 

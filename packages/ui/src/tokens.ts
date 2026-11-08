@@ -119,6 +119,15 @@ export const color: Record<ThemeName, ColorTokens> = {
   },
 };
 
+/**
+ * Chart series colours, in fixed order (`--np-chart-1…4`). Categorical palette validated for
+ * lightness band, chroma, colour-vision-deficiency separation and ≥ 3:1 against the surface.
+ */
+export const chart: Record<ThemeName, readonly [string, string, string, string]> = {
+  light: ["#00826b", "#5b5bd6", "#b0417e", "#8a6a00"],
+  dark: ["#24a487", "#7a7cec", "#d65a98", "#ad8220"],
+};
+
 /** Type scale (px). Headings are tight; body uses a generous line height. */
 export const fontSize = {
   display: 64,
@@ -187,6 +196,7 @@ export const motion = { fast: 120, base: 200 } as const;
 export const tokens = {
   palette,
   color,
+  chart,
   fontSize,
   fontWeight,
   lineHeight,

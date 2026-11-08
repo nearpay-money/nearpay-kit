@@ -439,12 +439,57 @@
   .np-input__adornment--trailing {
     padding-right: var(--np-space-4);
   }
+  .np-textarea {
+    display: flex;
+    border: 1px solid var(--np-color-border-control);
+    border-radius: var(--np-radius-control);
+    background: var(--np-color-surface);
+    color: var(--np-color-text);
+    transition:
+      border-color var(--np-duration-fast) var(--np-ease),
+      box-shadow var(--np-duration-fast) var(--np-ease);
+  }
+  .np-textarea:hover {
+    border-color: var(--np-color-text-secondary);
+  }
+  .np-textarea:focus-within {
+    border-color: var(--np-color-focus);
+    box-shadow: 0 0 0 1px var(--np-color-focus);
+  }
+  .np-textarea__control {
+    flex: 1;
+    min-width: 0;
+    min-height: 96px;
+    padding: var(--np-space-3) var(--np-space-4);
+    border: 0;
+    border-radius: inherit;
+    background: transparent;
+    color: inherit;
+    font-size: var(--np-text-body);
+    line-height: 24px;
+    outline: none;
+    resize: vertical;
+  }
+  .np-textarea--fixed .np-textarea__control {
+    resize: none;
+  }
+  .np-textarea__control::placeholder {
+    color: var(--np-color-text-secondary);
+    opacity: 1;
+  }
+  .np-textarea:has(.np-textarea__control:disabled) {
+    background: var(--np-color-surface-muted);
+    border-color: var(--np-color-border);
+    color: var(--np-color-text-secondary);
+  }
   .np-input:has(.np-input__control[aria-invalid="true"]),
-  .np-select:has(.np-select__control[aria-invalid="true"]) {
+  .np-select:has(.np-select__control[aria-invalid="true"]),
+  .np-textarea:has(.np-textarea__control[aria-invalid="true"]) {
     border-color: var(--np-color-danger-fg);
   }
   .np-input:has(.np-input__control[aria-invalid="true"]):focus-within,
-  .np-select:has(.np-select__control[aria-invalid="true"]):focus-within {
+  .np-select:has(.np-select__control[aria-invalid="true"]):focus-within,
+  .np-textarea:has(.np-textarea__control[aria-invalid="true"]):focus-within {
     box-shadow: 0 0 0 1px var(--np-color-danger-fg);
   }
   .np-input:has(.np-input__control:disabled),
@@ -762,6 +807,28 @@
     outline-offset: -2px;
   }
 
+  .np-option--button {
+    width: 100%;
+    font: inherit;
+    text-align: left;
+  }
+  .np-option--button:focus-visible {
+    outline: 2px solid var(--np-color-focus);
+    outline-offset: 2px;
+  }
+  .np-option--button:disabled {
+    cursor: not-allowed;
+    background: var(--np-color-surface-muted);
+    color: var(--np-color-text-secondary);
+  }
+  .np-option__indicator--center {
+    align-self: center;
+  }
+  .np-combobox__slot {
+    display: flex;
+    flex-direction: column;
+    gap: var(--np-space-3);
+  }
   .np-combobox {
     display: flex;
     flex-direction: column;
@@ -938,7 +1005,7 @@
    */
   .np-stat-group {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(min(200px, 100%), 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--np-stat-min, 200px)), 1fr));
     gap: var(--np-space-6);
     margin: 0;
   }
@@ -1301,10 +1368,11 @@
   /* ======================================================================================== */
   /* Modal                                                                                     */
   /* ======================================================================================== */
+  /* Stacked modals: --np-layer is set per modal through the CSSOM (see layers.ts). */
   .np-modal-backdrop {
     position: fixed;
     inset: 0;
-    z-index: var(--np-z-overlay);
+    z-index: calc(var(--np-z-overlay) + var(--np-layer, 0) * 2);
     display: grid;
     place-items: center;
     padding: var(--np-space-6);
@@ -1496,7 +1564,9 @@
     container-type: inline-size;
     min-width: 0;
   }
+  /* Positioned so row-link overlays (::after, inset 0) stay inside the scroll box in every engine. */
   .np-table-scroll {
+    position: relative;
     overflow-x: auto;
     border: 1px solid var(--np-color-border);
     border-radius: var(--np-radius-control);
@@ -1764,11 +1834,19 @@
   /* ======================================================================================== */
   /* AppShell                                                                                  */
   /* ======================================================================================== */
+  /*
+   * The sidebar column colour is painted by the shell itself, so it runs the full page height
+   * even when the content is taller than the (sticky, viewport-high) sidebar.
+   */
   .np-shell {
     display: grid;
     grid-template-columns: var(--np-size-sidebar) minmax(0, 1fr);
     min-height: 100vh;
-    background: var(--np-color-surface);
+    background: linear-gradient(
+      to right,
+      var(--np-color-surface-muted) var(--np-size-sidebar),
+      var(--np-color-surface) var(--np-size-sidebar)
+    );
     color: var(--np-color-text);
   }
   @supports (height: 100dvh) {
@@ -1917,7 +1995,27 @@
     display: flex;
     flex-direction: column;
     gap: var(--np-space-3);
-    margin-top: var(--np-space-4);
+    margin-top: auto;
+    padding-top: var(--np-space-4);
+  }
+  .np-shell__footer-item {
+    display: contents;
+  }
+  .np-shell__footer-actions {
+    display: flex;
+    flex-direction: column;
+    gap: var(--np-space-2);
+    padding-top: var(--np-space-3);
+    border-top: 1px solid var(--np-color-border);
+  }
+  .np-workspace-switcher__anchor {
+    display: flex;
+  }
+  .np-workspace-switcher--static {
+    cursor: default;
+  }
+  .np-workspace-switcher--static:hover {
+    border-color: var(--np-color-border);
   }
   .np-shell__footer-link {
     color: var(--np-color-text-secondary);
@@ -2002,6 +2100,7 @@
   @media (max-width: 959px) {
     .np-shell {
       grid-template-columns: minmax(0, 1fr);
+      background: var(--np-color-surface);
     }
     .np-shell__sidebar {
       position: fixed;
@@ -2056,14 +2155,23 @@
   /* ======================================================================================== */
   /* CheckoutFrame (container-query responsive)                                                */
   /* ======================================================================================== */
+  /*
+   * The root is the size container; a container query cannot style its own container, so the
+   * background is painted by the canvas child (which fills the root's height).
+   */
   .np-checkout {
     container-type: inline-size;
     container-name: np-checkout;
+    display: flex;
+    flex-direction: column;
     min-height: 100%;
-    background: var(--np-color-surface);
     color: var(--np-color-text);
   }
-  .np-checkout--embed {
+  .np-checkout__canvas {
+    flex: 1 0 auto;
+    background: var(--np-color-surface);
+  }
+  .np-checkout--embed > .np-checkout__canvas {
     background: transparent;
   }
   .np-checkout__inner {
@@ -2211,7 +2319,7 @@
   }
 
   @container np-checkout (min-width: 880px) {
-    .np-checkout--page {
+    .np-checkout--page > .np-checkout__canvas {
       background: var(--np-color-bg);
     }
     .np-checkout--with-summary .np-checkout__inner {
@@ -2256,5 +2364,611 @@
       background: var(--np-color-surface);
       align-self: start;
     }
+  }
+
+  /* ======================================================================================== */
+  /* CopyText, IdText                                                                          */
+  /* ======================================================================================== */
+  .np-copy-text {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--np-space-1);
+    max-width: 100%;
+    vertical-align: middle;
+  }
+  .np-copy-text__value {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+  .np-copy-text--mono .np-copy-text__value {
+    font-family: var(--np-font-mono);
+    font-size: 0.9em;
+  }
+  .np-copy-text__button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    border: 0;
+    border-radius: var(--np-radius-badge);
+    background: transparent;
+    color: var(--np-color-text-secondary);
+    cursor: pointer;
+  }
+  .np-copy-text__button:hover {
+    background: var(--np-color-surface-muted);
+    color: var(--np-color-text);
+  }
+  /* Bigger hit area than the 28 px glyph box on touch screens. */
+  @media (pointer: coarse) {
+    .np-copy-text__button {
+      width: 40px;
+      height: 40px;
+    }
+  }
+
+  /* ======================================================================================== */
+  /* Popover, Menu, select-style button, FilterBar                                             */
+  /* ======================================================================================== */
+  .np-popover-anchor {
+    position: relative;
+    display: inline-flex;
+  }
+  .np-popover {
+    position: absolute;
+    top: calc(100% + var(--np-space-2));
+    left: 0;
+    z-index: var(--np-z-popover);
+    min-width: 220px;
+    max-width: min(360px, calc(100vw - 2 * var(--np-space-4)));
+    padding: var(--np-space-4);
+    border: 1px solid var(--np-color-border);
+    border-radius: var(--np-radius-control);
+    background: var(--np-color-surface);
+    color: var(--np-color-text);
+    box-shadow: var(--np-shadow-overlay);
+    animation: np-rise var(--np-duration-fast) var(--np-ease);
+  }
+  .np-popover:focus-visible {
+    outline: 2px solid var(--np-color-focus);
+    outline-offset: 2px;
+  }
+  .np-popover--end {
+    left: auto;
+    right: 0;
+  }
+  .np-popover--top {
+    top: auto;
+    bottom: calc(100% + var(--np-space-2));
+  }
+  .np-popover--menu {
+    padding: var(--np-space-1);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .np-popover {
+      animation: none;
+    }
+  }
+  .np-menu {
+    display: flex;
+    flex-direction: column;
+    max-height: min(400px, 60vh);
+    overflow-y: auto;
+  }
+  .np-menu__link-wrap {
+    display: contents;
+  }
+  .np-menu__item {
+    display: flex;
+    align-items: center;
+    gap: var(--np-space-3);
+    width: 100%;
+    min-height: 40px;
+    padding: var(--np-space-2) var(--np-space-3);
+    border: 0;
+    border-radius: calc(var(--np-radius-control) - 2px);
+    background: transparent;
+    color: var(--np-color-text);
+    font-size: var(--np-text-small);
+    line-height: 20px;
+    text-align: left;
+    text-decoration: none;
+    cursor: pointer;
+  }
+  .np-menu__item:hover,
+  .np-menu__item:focus-visible {
+    background: var(--np-color-surface-muted);
+    outline: none;
+  }
+  .np-menu__item:focus-visible {
+    box-shadow: inset 0 0 0 2px var(--np-color-focus);
+  }
+  .np-menu__item[aria-disabled="true"] {
+    color: var(--np-color-text-secondary);
+    cursor: not-allowed;
+  }
+  .np-menu__item--danger {
+    color: var(--np-color-danger-fg);
+  }
+  .np-menu__item--checked .np-menu__label {
+    font-weight: var(--np-weight-medium);
+  }
+  .np-menu__check,
+  .np-menu__icon {
+    display: inline-flex;
+    width: 16px;
+    flex-shrink: 0;
+    color: var(--np-color-accent-text);
+  }
+  .np-menu__icon {
+    width: 20px;
+    color: var(--np-color-text-secondary);
+  }
+  .np-menu__text {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+  .np-menu__description {
+    font-size: var(--np-text-caption);
+    line-height: 16px;
+    color: var(--np-color-text-secondary);
+  }
+  .np-menu__separator {
+    height: 0;
+    margin: var(--np-space-1) 0;
+    border: 0;
+    border-top: 1px solid var(--np-color-border);
+  }
+  .np-menu__heading {
+    padding: var(--np-space-2) var(--np-space-3) var(--np-space-1);
+    font-size: 11px;
+    font-weight: var(--np-weight-medium);
+    line-height: 16px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--np-color-text-secondary);
+  }
+  .np-select-button {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--np-space-1);
+    min-height: var(--np-size-control-dense);
+    padding: 0 var(--np-space-3) 0 var(--np-space-4);
+    border: 1px solid var(--np-color-border-control);
+    border-radius: var(--np-radius-control);
+    background: var(--np-color-surface);
+    color: var(--np-color-text);
+    font-size: var(--np-text-small);
+    line-height: 20px;
+    white-space: nowrap;
+    cursor: pointer;
+  }
+  .np-select-button:hover {
+    border-color: var(--np-color-text-secondary);
+  }
+  .np-select-button[aria-expanded="true"] {
+    border-color: var(--np-color-focus);
+    box-shadow: 0 0 0 1px var(--np-color-focus);
+  }
+  .np-select-button:disabled {
+    background: var(--np-color-surface-muted);
+    border-color: var(--np-color-border);
+    color: var(--np-color-text-secondary);
+    cursor: not-allowed;
+  }
+  .np-select-button__label {
+    color: var(--np-color-text-secondary);
+  }
+  .np-select-button__value {
+    font-weight: var(--np-weight-medium);
+  }
+  .np-select-button__caret {
+    margin-left: var(--np-space-1);
+    color: var(--np-color-text-secondary);
+  }
+  .np-select-button--active {
+    border-color: var(--np-color-accent-text);
+    background: var(--np-color-accent-subtle);
+  }
+  .np-select-button--active .np-select-button__label,
+  .np-select-button--active .np-select-button__value {
+    color: var(--np-color-accent-subtle-text);
+  }
+  .np-menu-trigger--ghost[aria-expanded="true"] {
+    background: var(--np-color-surface-muted);
+  }
+  .np-filter-bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--np-space-3);
+  }
+  .np-filter-bar__filters,
+  .np-filter-bar__actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--np-space-2);
+    min-width: 0;
+  }
+  .np-filter-bar__filters .np-input {
+    min-height: var(--np-size-control-dense);
+    min-width: min(100%, 240px);
+  }
+  .np-filter-bar__filters .np-input__control {
+    height: calc(var(--np-size-control-dense) - 2px);
+    font-size: var(--np-text-small);
+  }
+
+  /* ======================================================================================== */
+  /* ErrorState, StateScreen                                                                   */
+  /* ======================================================================================== */
+  .np-error-state__icon {
+    color: var(--np-color-danger-fg);
+  }
+  .np-error-state .np-empty__action .np-button {
+    min-width: 0;
+  }
+  .np-state {
+    display: flex;
+    flex-direction: column;
+    gap: var(--np-space-6);
+  }
+  .np-state__head {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--np-space-4);
+  }
+  .np-state__icon {
+    display: inline-flex;
+    color: var(--np-color-accent-text);
+  }
+  .np-state__icon .np-icon {
+    width: 32px;
+    height: 32px;
+  }
+  .np-state__icon--success {
+    color: var(--np-color-success-fg);
+  }
+  .np-state__icon--warning {
+    color: var(--np-color-warning-fg);
+  }
+  .np-state__icon--danger {
+    color: var(--np-color-danger-fg);
+  }
+  .np-state__icon--neutral {
+    color: var(--np-color-text-secondary);
+  }
+  .np-state__title {
+    font-size: var(--np-text-h2);
+    font-weight: var(--np-weight-medium);
+    line-height: 40px;
+    letter-spacing: var(--np-tracking-heading);
+  }
+  .np-state__lede {
+    color: var(--np-color-text-secondary);
+  }
+  .np-state__actions {
+    display: flex;
+    flex-direction: column;
+    gap: var(--np-space-3);
+  }
+
+  /* ======================================================================================== */
+  /* PageLayout, Section, TwoColumnLayout                                                      */
+  /* ======================================================================================== */
+  .np-page {
+    display: flex;
+    flex-direction: column;
+    gap: var(--np-space-8);
+    width: 100%;
+    min-width: 0;
+  }
+  .np-page--default {
+    max-width: 1120px;
+  }
+  .np-page--narrow {
+    max-width: 720px;
+  }
+  .np-page__header {
+    display: flex;
+    flex-direction: column;
+    gap: var(--np-space-6);
+  }
+  .np-page__body {
+    display: flex;
+    flex-direction: column;
+    gap: var(--np-space-10);
+    min-width: 0;
+  }
+  .np-section {
+    display: flex;
+    flex-direction: column;
+    gap: var(--np-space-6);
+    min-width: 0;
+  }
+  .np-section--divided {
+    padding-top: var(--np-space-10);
+    border-top: 1px solid var(--np-color-border);
+  }
+  .np-section__header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: var(--np-space-4);
+  }
+  .np-section__text {
+    display: flex;
+    flex-direction: column;
+    gap: var(--np-space-1);
+    min-width: 0;
+  }
+  .np-section__title {
+    font-size: var(--np-text-h3);
+    font-weight: var(--np-weight-medium);
+    line-height: 32px;
+    letter-spacing: var(--np-tracking-heading);
+  }
+  .np-section__title--sm {
+    font-size: var(--np-text-h4);
+    line-height: 28px;
+    letter-spacing: 0;
+  }
+  .np-section__description {
+    color: var(--np-color-text-secondary);
+  }
+  .np-section__actions {
+    display: flex;
+    gap: var(--np-space-3);
+  }
+  /* The outer element is the size container; the grid inside is what the query restyles. */
+  .np-two-col {
+    container: np-two-col / inline-size;
+    min-width: 0;
+  }
+  .np-two-col__grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--np-space-10);
+  }
+  .np-two-col__main,
+  .np-two-col__aside {
+    min-width: 0;
+  }
+  @container np-two-col (min-width: 880px) {
+    .np-two-col__grid {
+      grid-template-columns: minmax(0, 1fr) minmax(280px, 400px);
+      gap: var(--np-space-12);
+      align-items: start;
+    }
+    .np-two-col--sticky .np-two-col__aside {
+      position: sticky;
+      top: calc(var(--np-size-topbar) + var(--np-space-6));
+    }
+  }
+
+  /* ======================================================================================== */
+  /* LineChart                                                                                 */
+  /* ======================================================================================== */
+  .np-chart {
+    --np-chart-h: 200px;
+    display: flex;
+    flex-direction: column;
+    gap: var(--np-space-4);
+    margin: 0;
+    min-width: 0;
+  }
+  .np-chart--sm {
+    --np-chart-h: 120px;
+  }
+  .np-chart__legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--np-space-4);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    font-size: var(--np-text-caption);
+    line-height: 16px;
+    color: var(--np-color-text-secondary);
+  }
+  .np-chart__legend-item {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--np-space-2);
+  }
+  .np-chart__key {
+    display: inline-block;
+    width: 12px;
+    height: 2px;
+    border-radius: 1px;
+    background: var(--np-chart-1);
+  }
+  .np-chart__key--2 {
+    background: var(--np-chart-2);
+  }
+  .np-chart__key--3 {
+    background: var(--np-chart-3);
+  }
+  .np-chart__key--4 {
+    background: var(--np-chart-4);
+  }
+  .np-chart__frame {
+    display: grid;
+    grid-template-columns: max-content minmax(0, 1fr);
+    grid-template-rows: auto auto;
+    column-gap: var(--np-space-3);
+    row-gap: var(--np-space-2);
+  }
+  /* Y labels in a gutter as wide as the widest label; each sits centred on its gridline. */
+  .np-chart__y {
+    position: relative;
+    margin-top: var(--np-space-4);
+    height: var(--np-chart-h);
+    font-size: var(--np-text-caption);
+    line-height: 16px;
+    color: var(--np-color-text-secondary);
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+  .np-chart__y-sizer {
+    display: block;
+    height: 0;
+    overflow: hidden;
+    visibility: hidden;
+    white-space: nowrap;
+  }
+  .np-chart__y-label {
+    position: absolute;
+    right: 0;
+    bottom: var(--np-chart-y, 0%);
+    transform: translateY(50%);
+    white-space: nowrap;
+  }
+  .np-chart__plot {
+    position: relative;
+    margin-top: var(--np-space-4);
+    height: var(--np-chart-h);
+    border-radius: var(--np-radius-badge);
+    touch-action: pan-y;
+  }
+  .np-chart__plot:focus-visible {
+    outline: 2px solid var(--np-color-focus);
+    outline-offset: 4px;
+  }
+  .np-chart__svg {
+    display: block;
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+  }
+  .np-chart__grid {
+    stroke: var(--np-color-border);
+    stroke-width: 1;
+    vector-effect: non-scaling-stroke;
+  }
+  .np-chart__grid--zero {
+    stroke: var(--np-color-border-control);
+  }
+  .np-chart__crosshair {
+    stroke: var(--np-color-text-secondary);
+    stroke-width: 1;
+    vector-effect: non-scaling-stroke;
+  }
+  .np-chart__line {
+    fill: none;
+    stroke: var(--np-chart-1);
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    vector-effect: non-scaling-stroke;
+  }
+  .np-chart__line--2 {
+    stroke: var(--np-chart-2);
+  }
+  .np-chart__line--3 {
+    stroke: var(--np-chart-3);
+  }
+  .np-chart__line--4 {
+    stroke: var(--np-chart-4);
+  }
+  /* Markers are zero-length round-capped lines: round at any aspect ratio (non-scaling stroke). */
+  .np-chart__marker {
+    stroke: var(--np-chart-1);
+    stroke-width: 8;
+    stroke-linecap: round;
+    vector-effect: non-scaling-stroke;
+  }
+  .np-chart__marker--2 {
+    stroke: var(--np-chart-2);
+  }
+  .np-chart__marker--3 {
+    stroke: var(--np-chart-3);
+  }
+  .np-chart__marker--4 {
+    stroke: var(--np-chart-4);
+  }
+  .np-chart__x {
+    grid-column: 2;
+    position: relative;
+    height: 16px;
+    font-size: var(--np-text-caption);
+    line-height: 16px;
+    color: var(--np-color-text-secondary);
+  }
+  .np-chart__x-label {
+    position: absolute;
+    left: var(--np-chart-x, 0%);
+    transform: translateX(-50%);
+    white-space: nowrap;
+  }
+  .np-chart__x-label--first {
+    transform: none;
+  }
+  .np-chart__x-label--last {
+    transform: translateX(-100%);
+  }
+  .np-chart__tooltip {
+    position: absolute;
+    top: 0;
+    left: var(--np-chart-x, 0%);
+    z-index: 1;
+    min-width: 120px;
+    margin-left: var(--np-space-3);
+    padding: var(--np-space-2) var(--np-space-3);
+    border: 1px solid var(--np-color-border);
+    border-radius: var(--np-radius-control);
+    background: var(--np-color-surface);
+    box-shadow: var(--np-shadow-overlay);
+    pointer-events: none;
+    font-size: var(--np-text-caption);
+    line-height: 16px;
+  }
+  .np-chart__tooltip--left {
+    margin-left: 0;
+    transform: translateX(calc(-100% - var(--np-space-3)));
+  }
+  .np-chart__tooltip-title {
+    margin-bottom: var(--np-space-1);
+    color: var(--np-color-text-secondary);
+  }
+  .np-chart__tooltip-row {
+    display: flex;
+    align-items: center;
+    gap: var(--np-space-2);
+    white-space: nowrap;
+  }
+  .np-chart__tooltip-value {
+    font-weight: var(--np-weight-medium);
+    font-variant-numeric: tabular-nums;
+    color: var(--np-color-text);
+  }
+  .np-chart__tooltip-name {
+    color: var(--np-color-text-secondary);
+  }
+  @media (forced-colors: active) {
+    .np-chart__line,
+    .np-chart__marker {
+      stroke: CanvasText;
+    }
+  }
+
+  /* ======================================================================================== */
+  /* Contextual overrides (kept last: they out-rank the base rules above)                       */
+  /* ======================================================================================== */
+  .np-workspace-switcher__anchor .np-popover {
+    right: 0;
+  }
+  /* Field-level error state for composite controls inside an invalid Field. */
+  .np-field--invalid .np-combobox .np-input,
+  .np-field--invalid .np-select-button {
+    border-color: var(--np-color-danger-fg);
   }
 }

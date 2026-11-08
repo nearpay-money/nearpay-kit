@@ -1,6 +1,7 @@
 import "../../src/fonts.css";
 import "../../src/tokens.css";
 import "../../src/styles.css";
+import "../../src/prose.css";
 import "./gallery.css";
 
 import { type ReactNode, StrictMode, useState } from "react";
@@ -24,6 +25,7 @@ import {
   SearchInput,
   SelectionCard,
   ShieldCheckIcon,
+  StateScreen,
   StatusBadge,
   ThemeRoot,
   type ThemeSetting,
@@ -47,6 +49,18 @@ import {
   OverlayDemo,
   TableDemo,
 } from "./demos.js";
+import {
+  CopyTextDemo,
+  ErrorStatesDemo,
+  FiltersDemo,
+  LayoutDemo,
+  LineChartDemo,
+  OptionButtonDemo,
+  ProseDemo,
+  StackedModalsDemo,
+  SvgIconsDemo,
+  TextareaDemo,
+} from "./demos-021.js";
 
 /* ------------------------------------------------------------------------------------------ */
 
@@ -221,7 +235,7 @@ function SendManual() {
   );
 }
 
-function StateScreen({
+function ResultScreen({
   icon,
   title,
   body,
@@ -243,14 +257,15 @@ function StateScreen({
   return (
     <CheckoutFrame merchant={MERCHANT} amount={AMOUNT} onBack={() => {}} links={LINKS}>
       <hr className="np-divider" />
-      <div className="np-stack">
-        <span className="np-checkout__state-icon">{icon}</span>
-        <h1 className="np-checkout__title">{title}</h1>
-        <p className="np-checkout__lede">{body}</p>
-        <StatusBadge>{badge}</StatusBadge>
-      </div>
-      <Callout tone={tone} title={callout} reference={reference} live />
-      {action}
+      <StateScreen
+        icon={icon}
+        title={title}
+        badge={badge}
+        callout={{ tone, title: callout, reference }}
+        actions={action}
+      >
+        {body}
+      </StateScreen>
     </CheckoutFrame>
   );
 }
@@ -270,7 +285,7 @@ function CheckoutStates() {
         <SendManual />
       </PhoneFrame>
       <PhoneFrame label="Confirming">
-        <StateScreen
+        <ResultScreen
           icon={<ClockIcon />}
           title="Confirming your payment"
           body="Your payment was detected. Keep this page open while we confirm it."
@@ -284,7 +299,7 @@ function CheckoutStates() {
         />
       </PhoneFrame>
       <PhoneFrame label="Complete">
-        <StateScreen
+        <ResultScreen
           icon={<CheckIcon />}
           title="Payment complete"
           body="Acme Studio has received your payment."
@@ -294,7 +309,7 @@ function CheckoutStates() {
         />
       </PhoneFrame>
       <PhoneFrame label="Under review">
-        <StateScreen
+        <ResultScreen
           icon={<ShieldCheckIcon />}
           title="Payment under review"
           body="Your payment was received and needs a review before the order can be confirmed."
@@ -434,13 +449,24 @@ const TOC: Array<[string, string]> = [
   ["loading", "Skeleton · EmptyState"],
   ["cards", "Card"],
   ["icons", "Icons"],
+  ["new-021", "— New in 0.2.1 —"],
+  ["textarea", "Textarea · field errors"],
+  ["error-state", "ErrorState"],
+  ["copy-text", "CopyText · IdText"],
+  ["filters", "FilterBar · Menu · Popover"],
+  ["stacked-modals", "Stacked modals · step-up"],
+  ["option-button", "OptionButton"],
+  ["layout", "PageLayout · Section · TwoColumn"],
+  ["line-chart", "LineChart"],
+  ["svg-icons", "Icons as SVG strings"],
+  ["prose", "prose.css"],
 ];
 
 function App() {
   return (
     <ThemeRoot theme="light" className="g-app">
       <header className="g-header">
-        <p className="g-header__eyebrow">@nearpay-internal/ui · v0.2.0</p>
+        <p className="g-header__eyebrow">@nearpay-internal/ui · v0.2.1</p>
         <h1 className="np-text-h1">NearPay design system</h1>
         <p className="g-header__lede">
           Tokens, components and reference screens rebuilt from the owner’s Figma. Every component is shown in light and
@@ -585,6 +611,67 @@ function App() {
             lede="Inline SVG, 24 px grid, currentColor. No icon font, no remote assets."
           >
             <Pair>{() => <IconsDemo />}</Pair>
+          </Section>
+          <Section id="new-021" title="New in 0.2.1" lede="Gaps reported by the Stage 2 UI builders.">
+            <span />
+          </Section>
+          <Section id="textarea" title="Textarea · field-level error state">
+            <Pair>{() => <TextareaDemo />}</Pair>
+          </Section>
+          <Section
+            id="error-state"
+            title="ErrorState"
+            lede="Title, message, retry (with busy state), support reference."
+          >
+            <Pair>{() => <ErrorStatesDemo />}</Pair>
+          </Section>
+          <Section
+            id="copy-text"
+            title="CopyText · IdText"
+            lede="Short values and monospace ids with copy; results announced politely."
+          >
+            <Pair>{() => <CopyTextDemo />}</Pair>
+          </Section>
+          <Section
+            id="filters"
+            title="FilterBar · FilterPill · MenuButton · Popover"
+            lede="Select-style pills open single-choice menus; ↑/↓, Home/End, type-ahead, Esc."
+          >
+            <Pair>{() => <FiltersDemo />}</Pair>
+          </Section>
+          <Section
+            id="stacked-modals"
+            title="Stacked modals · step-up"
+            lede="Nested dialogs stack; the step-up dialog sits above any open modal."
+          >
+            <Pair>{() => <StackedModalsDemo />}</Pair>
+          </Section>
+          <Section id="option-button" title="OptionButton">
+            <Pair>{() => <OptionButtonDemo />}</Pair>
+          </Section>
+          <Section
+            id="layout"
+            title="PageLayout · Section · TwoColumnLayout"
+            lede="Form + side panel; stacks below 880 px of its own width."
+          >
+            <Pair single>{() => <LayoutDemo />}</Pair>
+          </Section>
+          <Section
+            id="line-chart"
+            title="LineChart"
+            lede="Integer inputs (bigint/strings), crosshair + tooltip on hover and ←/→, hidden data table."
+          >
+            <Pair>{() => <LineChartDemo />}</Pair>
+          </Section>
+          <Section
+            id="svg-icons"
+            title="Icons as SVG strings"
+            lede="@nearpay-internal/ui/icons-svg — React-free, for Astro/static pages."
+          >
+            <Pair>{() => <SvgIconsDemo />}</Pair>
+          </Section>
+          <Section id="prose" title="prose.css" lede="Optional long-form styles: prose, code block, table of contents.">
+            <Pair>{() => <ProseDemo />}</Pair>
           </Section>
         </main>
       </div>
