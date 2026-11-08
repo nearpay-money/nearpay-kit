@@ -3,6 +3,40 @@
 All packages in this repository share one version. Breaking changes bump the major version and
 carry a migration note here (semver, foundations §4).
 
+## 0.3.0 — 2026-11-08
+
+Stage 3 step 3.1 (agent-commerce). Additive; minor bump because every package now builds against
+spec 0.3.0.
+
+### spec 0.3.0
+
+- Every package depends on `@nearpay/spec` / `@nearpay-internal/spec` **0.3.0**.
+
+### service — SSE limits, resume cursor, `ctx.sse`
+
+- `@nearpay-internal/service`: `openSse(res, def, headers, limits?)` and `ctx.sse(limits?)` take
+  optional `SseLimits {maxDurationMs, maxBufferedBytes, slowClientMs}`. The stream closes itself
+  after `maxDurationMs`. It also closes a client that keeps more than `maxBufferedBytes` unsent for
+  `slowClientMs` (default 30 s; checked on each heartbeat). `SseStream.buffered` and
+  `SseStream.drain()` let a replaying producer wait for the socket. `resumeCursor(headers, query?)`:
+  `Last-Event-ID` wins over `starting_after`. For the webhooks event stream (lld/webhooks.md §5.1).
+  The limits stay parametric; the service maps spec `EVENT_STREAM_MAX_SECONDS` /
+  `EVENT_STREAM_MAX_CONCURRENT` onto them (heartbeat and retry come from the route's `stream`
+  definition).
+
+### intents — x402 `near-intents` binding, operation token, JCS
+
+- `@nearpay-internal/intents`: x402 `near-intents` helpers for agentpay (lld/agentpay.md §3.1).
+  - `nearIntentsBinding(input)`: `np1:` + base58(sha256(JCS)).
+  - `mintOperationToken(key, kid, input)` and `verifyOperationToken(token, keys, input, now)`:
+    `<kid>.<expiry>.<HMAC-SHA256 over JCS>`. Expiry is checked before the key, and the MAC
+    compare is constant-time. Failure reasons: `malformed`, `expired`, `unknown_key`, `invalid`.
+  - `jcs()` for string/integer/null/object values.
+- `NearIntentsBindingInput` / `OperationTokenInput` are the declared fields of the spec's
+  `X402NearIntentsBindingInput` / `X402OperationTokenInput`. Tests read the spec vectors
+  `test-vectors/x402-near-intents.json` and compare the kit's output with the spec's own
+  `parseOperationToken` and `quotedRequirements`.
+
 ## 0.2.1 — 2026-11-08
 
 Stage 2 follow-up. Additive except the **`NP_ENV` behaviour change** below (deliberately shipped in

@@ -25,3 +25,12 @@ export {
 } from "./rpc.js";
 export { evmAddress, implicitAccountId, nearPublicKey, signErc191, signNep413, signRawEd25519 } from "./sign.js";
 export { type VerifyFailure, type VerifyResult, verifySigned } from "./verify.js";
+export {
+  jcs,
+  mintOperationToken,
+  type NearIntentsBindingInput,
+  nearIntentsBinding,
+  type OperationTokenCheck,
+  type OperationTokenInput,
+  verifyOperationToken,
+} from "./x402.js";

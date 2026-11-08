@@ -1,6 +1,6 @@
 {
   "name": "@nearpay-internal/ids",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "description": "Prefixed UUIDv7 ids (TypeID encoding): newId, toUuid, fromUuid, isId.",
   "license": "Apache-2.0",
   "type": "module",
@@ -24,7 +24,7 @@
     "build": "node ../../scripts/build-package.mjs"
   },
   "dependencies": {
-    "@nearpay/spec": "0.2.1"
+    "@nearpay/spec": "0.3.0"
   },
   "peerDependencies": {
     "zod": "^4.6.7"
