@@ -209,9 +209,6 @@ body {
 .g-desktop .np-shell {
   min-height: 100%;
 }
-.g-desktop .np-shell__sidebar {
-  height: 1000px;
-}
 .g-desktop--checkout {
   height: auto;
   overflow: visible;
@@ -474,4 +471,16 @@ body {
   .g-pair {
     grid-template-columns: minmax(0, 1fr);
   }
+}
+
+/* 0.2.1 demos */
+.g-svg-icon {
+  display: inline-flex;
+  color: var(--np-color-text);
+}
+.g-prose {
+  display: grid;
+  grid-template-columns: 180px minmax(0, 1fr);
+  gap: 32px;
+  align-items: start;
 }

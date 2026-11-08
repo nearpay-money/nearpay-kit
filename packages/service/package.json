@@ -1,6 +1,6 @@
 {
   "name": "@nearpay-internal/service",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Service bootstrap: Fastify routes from spec definitions, internal-token auth, request context, error envelopes, idempotency hook, SSE, health/readiness, Prometheus metrics, tracing, pino, config/secrets, graceful shutdown, process runner.",
   "license": "Apache-2.0",
   "type": "module",
@@ -27,7 +27,7 @@
     "@nearpay-internal/auth": "workspace:*",
     "@nearpay-internal/http": "workspace:*",
     "@nearpay-internal/ids": "workspace:*",
-    "@nearpay/spec": "0.2.0",
+    "@nearpay/spec": "0.2.1",
     "@opentelemetry/api": "1.9.1",
     "@opentelemetry/exporter-trace-otlp-http": "0.223.0",
     "@opentelemetry/resources": "2.12.0",
@@ -40,7 +40,7 @@
     "zod": "^4.6.7"
   },
   "devDependencies": {
-    "@nearpay-internal/spec": "0.2.0",
+    "@nearpay-internal/spec": "0.2.1",
     "zod": "4.6.7"
   }
 }

@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { contrastRatio } from "../src/color.js";
-import { type ColorTokens, color, fontSize, palette, radius, size, type ThemeName } from "../src/tokens.js";
+import { type ColorTokens, chart, color, fontSize, palette, radius, size, type ThemeName } from "../src/tokens.js";
 
 const css = readFileSync(new URL("../src/tokens.css", import.meta.url), "utf8");
 const kebab = (s: string) => s.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`);
@@ -41,6 +41,14 @@ describe("tokens.css ↔ tokens.ts", () => {
       }
     });
   }
+  it("declares the chart series colours per theme, each ≥ 3:1 on the surface", () => {
+    for (const [name, decls] of themes) {
+      chart[name].forEach((hex, i) => {
+        expect(decls.get(`--np-chart-${i + 1}`)).toBe(hex);
+        expect(contrastRatio(hex, color[name].surface)).toBeGreaterThanOrEqual(3);
+      });
+    }
+  });
   it("auto (prefers dark) is identical to the dark theme", () => {
     expect(Object.fromEntries(auto)).toEqual(Object.fromEntries(dark));
   });

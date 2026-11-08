@@ -1,6 +1,6 @@
 {
   "name": "@nearpay-internal/ui",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "NearPay design system: tokens, component CSS and thin accessible React 19 components.",
   "license": "Apache-2.0",
   "type": "module",
@@ -12,9 +12,18 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
     },
+    "./money": {
+      "types": "./dist/money.d.ts",
+      "import": "./dist/money.js"
+    },
+    "./icons-svg": {
+      "types": "./dist/icons/svg.d.ts",
+      "import": "./dist/icons/svg.js"
+    },
     "./tokens.css": "./dist/tokens.css",
     "./styles.css": "./dist/styles.css",
     "./fonts.css": "./dist/fonts.css",
+    "./prose.css": "./dist/prose.css",
     "./package.json": "./package.json"
   },
   "files": [
@@ -38,7 +47,8 @@
     "copy": [
       "tokens.css",
       "styles.css",
-      "fonts.css"
+      "fonts.css",
+      "prose.css"
     ]
   },
   "peerDependencies": {

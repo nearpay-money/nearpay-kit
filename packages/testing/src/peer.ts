@@ -31,6 +31,7 @@ import {
   type RequestContext,
   type Service,
 } from "@nearpay-internal/service";
+import { testConfig } from "./env.js";
 import { mintTestToken, testKeySource } from "./tokens.js";
 
 /** One request the mock received (after validation and authorization). */
@@ -112,7 +113,7 @@ export async function mockPeer(o: MockPeerOptions): Promise<MockPeer> {
 
   const service = createService({
     name: o.service,
-    config: { env: "test", logLevel: "silent", host: "127.0.0.1", port: 0, metricsPort: 0 },
+    config: testConfig(),
     keys: o.keys ?? testKeySource(),
     responseValidation: "enforce",
     routes: own.map((r) => implement(r, dispatch)),

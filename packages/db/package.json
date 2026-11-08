@@ -1,6 +1,6 @@
 {
   "name": "@nearpay-internal/db",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Postgres helpers: Kysely, transactions, migrations, outbox/inbox, idempotency, jobs, leadership, envelope encryption.",
   "license": "Apache-2.0",
   "type": "module",
@@ -24,7 +24,7 @@
     "build": "node ../../scripts/build-package.mjs"
   },
   "dependencies": {
-    "@nearpay-internal/spec": "0.2.0",
+    "@nearpay-internal/spec": "0.2.1",
     "@nearpay-internal/ids": "workspace:*",
     "kysely": "0.29.8",
     "pg": "8.23.1",

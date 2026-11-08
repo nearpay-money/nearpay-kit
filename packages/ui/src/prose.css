@@ -1,0 +1,199 @@
+/*
+ * @nearpay-internal/ui — optional long-form text styles (docs, legal pages, guides).
+ * Requires tokens.css. Import only where long-form content is rendered:
+ *
+ *   import "@nearpay-internal/ui/prose.css";
+ *   <article class="np-prose">…markdown HTML…</article>
+ *   <nav class="np-toc" aria-label="On this page"><p class="np-toc__title">On this page</p><ol>…</ol></nav>
+ *   <figure class="np-codeblock"><figcaption class="np-codeblock__title">curl</figcaption><pre><code>…</code></pre></figure>
+ *
+ * Classes only, cascade layer np-components (app CSS wins), no inline styles (CSP-safe).
+ */
+@layer np-base, np-components, np-utilities;
+
+@layer np-components {
+  .np-prose {
+    max-width: 72ch;
+    color: var(--np-color-text);
+    font-size: var(--np-text-body);
+    line-height: 1.7;
+    overflow-wrap: break-word;
+  }
+  .np-prose > * + * {
+    margin-top: var(--np-space-4);
+  }
+  .np-prose :where(h1, h2, h3, h4) {
+    margin: 0;
+    font-weight: var(--np-weight-medium);
+    line-height: var(--np-leading-heading);
+    scroll-margin-top: calc(var(--np-size-topbar) + var(--np-space-4));
+  }
+  .np-prose h1 {
+    font-size: var(--np-text-h1);
+    letter-spacing: var(--np-tracking-display);
+  }
+  .np-prose h2 {
+    margin-top: var(--np-space-12);
+    font-size: var(--np-text-h3);
+    letter-spacing: var(--np-tracking-heading);
+  }
+  .np-prose h3 {
+    margin-top: var(--np-space-8);
+    font-size: var(--np-text-h4);
+  }
+  .np-prose h4 {
+    margin-top: var(--np-space-6);
+    font-size: var(--np-text-body);
+  }
+  .np-prose :where(h1, h2, h3, h4) + * {
+    margin-top: var(--np-space-3);
+  }
+  .np-prose p,
+  .np-prose ul,
+  .np-prose ol,
+  .np-prose blockquote,
+  .np-prose figure,
+  .np-prose table {
+    margin-bottom: 0;
+  }
+  .np-prose :where(ul, ol) {
+    padding-left: 1.5em;
+  }
+  .np-prose li + li {
+    margin-top: var(--np-space-2);
+  }
+  .np-prose li::marker {
+    color: var(--np-color-text-secondary);
+  }
+  .np-prose a {
+    color: var(--np-color-accent-text);
+    text-decoration: underline;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 0.2em;
+  }
+  .np-prose a:hover {
+    text-decoration-thickness: 2px;
+  }
+  .np-prose strong {
+    font-weight: var(--np-weight-semibold);
+  }
+  .np-prose blockquote {
+    margin-left: 0;
+    margin-right: 0;
+    padding-left: var(--np-space-4);
+    border-left: 3px solid var(--np-color-border);
+    color: var(--np-color-text-secondary);
+  }
+  .np-prose hr {
+    margin: var(--np-space-10) 0;
+    border: 0;
+    border-top: 1px solid var(--np-color-border);
+  }
+  .np-prose :not(pre) > code {
+    padding: 0.1em 0.35em;
+    border-radius: var(--np-radius-badge);
+    background: var(--np-color-surface-muted);
+    border: 1px solid var(--np-color-border);
+    font-family: var(--np-font-mono);
+    font-size: 0.875em;
+  }
+  .np-prose table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: var(--np-text-small);
+    line-height: 20px;
+  }
+  .np-prose :where(th, td) {
+    padding: var(--np-space-2) var(--np-space-3);
+    border-bottom: 1px solid var(--np-color-border);
+    text-align: left;
+    vertical-align: top;
+  }
+  .np-prose th {
+    color: var(--np-color-text-secondary);
+    font-weight: var(--np-weight-medium);
+  }
+
+  /* Code block: <pre> (optionally wrapped in .np-codeblock with a title). */
+  .np-prose pre,
+  .np-codeblock pre {
+    margin: 0;
+    padding: var(--np-space-4);
+    overflow-x: auto;
+    border: 1px solid var(--np-color-border);
+    border-radius: var(--np-radius-control);
+    background: var(--np-color-surface-muted);
+    color: var(--np-color-text);
+    font-family: var(--np-font-mono);
+    font-size: var(--np-text-small);
+    line-height: 1.6;
+    tab-size: 2;
+  }
+  .np-codeblock {
+    margin: 0;
+  }
+  .np-codeblock__title {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--np-space-3);
+    padding: var(--np-space-2) var(--np-space-4);
+    border: 1px solid var(--np-color-border);
+    border-bottom: 0;
+    border-radius: var(--np-radius-control) var(--np-radius-control) 0 0;
+    background: var(--np-color-surface);
+    color: var(--np-color-text-secondary);
+    font-size: var(--np-text-caption);
+    line-height: 16px;
+  }
+  .np-codeblock__title + pre {
+    border-top-left-radius: 0;
+    border-top-right-radius: 0;
+  }
+  .np-prose pre:focus-visible,
+  .np-codeblock pre:focus-visible {
+    outline: 2px solid var(--np-color-focus);
+    outline-offset: 2px;
+  }
+
+  /* Table of contents ("On this page"). Mark the current entry with aria-current="location". */
+  .np-toc {
+    font-size: var(--np-text-small);
+    line-height: 20px;
+  }
+  .np-toc__title {
+    margin: 0 0 var(--np-space-3);
+    font-size: var(--np-text-caption);
+    font-weight: var(--np-weight-medium);
+    line-height: 16px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--np-color-text-secondary);
+  }
+  .np-toc :where(ol, ul) {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    border-left: 1px solid var(--np-color-border);
+  }
+  .np-toc :where(ol, ul) :where(ol, ul) {
+    border-left: 0;
+    padding-left: var(--np-space-3);
+  }
+  .np-toc a {
+    display: block;
+    margin-left: -1px;
+    padding: var(--np-space-1) var(--np-space-3);
+    border-left: 2px solid transparent;
+    color: var(--np-color-text-secondary);
+    text-decoration: none;
+  }
+  .np-toc a:hover {
+    color: var(--np-color-text);
+  }
+  .np-toc a[aria-current] {
+    border-left-color: var(--np-color-accent-text);
+    color: var(--np-color-accent-text);
+    font-weight: var(--np-weight-medium);
+  }
+}

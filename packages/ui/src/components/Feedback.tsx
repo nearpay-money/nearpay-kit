@@ -15,6 +15,7 @@ import { CheckIcon, CloseIcon, CopyIcon, InfoIcon, WarningIcon } from "../icons/
 import { formatCountdown, truncateMiddle } from "../money.js";
 import { Button } from "./Button.js";
 import type { Tone } from "./Display.js";
+import { type LayerHandle, type LayerPriority, pushLayer } from "./layers.js";
 
 /* ------------------------------------------------------------------------------------------ */
 /* LiveRegion                                                                                   */
@@ -57,6 +58,7 @@ export interface CopyFieldProps {
   /** Start with the full value revealed. */
   defaultRevealed?: boolean;
   className?: string;
+  "data-testid"?: string;
 }
 
 /**
@@ -74,6 +76,7 @@ export function CopyField({
   writeText,
   defaultRevealed = false,
   className,
+  "data-testid": testId,
 }: CopyFieldProps) {
   const auto = useId();
   const valueId = `np-cf${auto}`;
@@ -98,7 +101,7 @@ export function CopyField({
   };
 
   return (
-    <div className={cx("np-copy-field", className)}>
+    <div className={cx("np-copy-field", className)} data-testid={testId}>
       <p className="np-copy-field__label" id={`${valueId}-label`}>
         {label}
       </p>
@@ -216,12 +219,19 @@ export interface ModalProps {
   dismissible?: boolean;
   /** Element to focus first (default: first focusable in the body, else the dialog). */
   initialFocus?: () => HTMLElement | null;
+  /**
+   * Stacking priority. Nested modals stack in open order; `step-up` (re-authentication) always
+   * sits above every other open modal, whenever it opens.
+   */
+  priority?: LayerPriority;
   className?: string;
+  "data-testid"?: string;
 }
 
 /**
  * Modal dialog: `aria-modal`, labelled by its title, focus trapped while open, `Esc` closes,
- * focus returns to the opener on close, page scroll locked.
+ * focus returns to the opener on close, page scroll locked. Modals stack: only the topmost open
+ * modal handles Esc/Tab, and the scroll lock lasts until the last one closes.
  */
 export function Modal({
   open,
@@ -233,22 +243,29 @@ export function Modal({
   size = "md",
   dismissible = true,
   initialFocus,
+  priority = "default",
   className,
+  "data-testid": testId,
 }: ModalProps) {
   const auto = useId();
   const titleId = `np-m${auto}-t`;
   const descId = `np-m${auto}-d`;
   const ref = useRef<HTMLDivElement>(null);
+  const backdropRef = useRef<HTMLDivElement>(null);
+  const layer = useRef<LayerHandle | null>(null);
   const onCloseRef = useRef(onClose);
   onCloseRef.current = onClose;
   const initialFocusRef = useRef(initialFocus);
   initialFocusRef.current = initialFocus;
+  const priorityRef = useRef(priority);
+  priorityRef.current = priority;
 
   useEffect(() => {
     if (!open) return;
     const opener = document.activeElement as HTMLElement | null;
-    const root = document.documentElement;
-    root.classList.add("np-scroll-locked");
+    const handle = pushLayer(priorityRef.current);
+    layer.current = handle;
+    backdropRef.current?.style.setProperty("--np-layer", String(handle.level()));
     const node = ref.current;
     const target =
       initialFocusRef.current?.() ??
@@ -260,7 +277,8 @@ export function Modal({
       node;
     target?.focus();
     return () => {
-      root.classList.remove("np-scroll-locked");
+      handle.release();
+      layer.current = null;
       if (opener && typeof opener.focus === "function" && opener.isConnected) opener.focus();
     };
   }, [open]);
@@ -268,13 +286,17 @@ export function Modal({
   if (!open) return null;
 
   const onKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
+    // Nested dialogs: only the topmost layer reacts (events bubble through parent dialogs).
+    if (layer.current && !layer.current.isTop()) return;
     if (e.key === "Escape") {
       e.stopPropagation();
       onCloseRef.current();
       return;
     }
     if (e.key !== "Tab" || !ref.current) return;
-    const items = Array.from(ref.current.querySelectorAll<HTMLElement>(FOCUSABLE));
+    const items = Array.from(ref.current.querySelectorAll<HTMLElement>(FOCUSABLE)).filter(
+      (el) => el.closest(".np-modal") === ref.current,
+    );
     if (items.length === 0) {
       e.preventDefault();
       ref.current.focus();
@@ -293,7 +315,11 @@ export function Modal({
   };
 
   return (
-    <div className="np-modal-backdrop">
+    <div
+      ref={backdropRef}
+      className={cx("np-modal-backdrop", priority === "step-up" && "np-modal-backdrop--step-up")}
+      data-testid={testId}
+    >
       <button
         type="button"
         className="np-modal-scrim"

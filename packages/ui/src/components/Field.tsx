@@ -4,6 +4,7 @@ import {
   type InputHTMLAttributes,
   type ReactNode,
   type SelectHTMLAttributes,
+  type TextareaHTMLAttributes,
   useContext,
   useId,
 } from "react";
@@ -13,6 +14,8 @@ import { ChevronDownIcon, SearchIcon, WarningIcon } from "../icons/index.js";
 interface FieldContextValue {
   id: string;
   describedBy: string | undefined;
+  /** Id of the error message when the field is invalid (for `aria-errormessage`). */
+  errorId: string | undefined;
   invalid: boolean;
   required: boolean;
 }
@@ -28,8 +31,13 @@ export interface FieldProps {
   label: ReactNode;
   /** Helper text under the control. */
   hint?: ReactNode;
-  /** Error message; marks the control `aria-invalid` and replaces nothing — hint stays visible. */
-  error?: ReactNode;
+  /**
+   * Error message (field-level error state): marks the control `aria-invalid`, points
+   * `aria-describedby` and `aria-errormessage` at the message, and colours the control border.
+   * The hint stays visible. `true` marks the field invalid without a message of its own (e.g.
+   * the message is shown elsewhere, such as an error summary).
+   */
+  error?: ReactNode | true;
   required?: boolean;
   /** Visually hide the label (it stays the accessible name). */
   hideLabel?: boolean;
@@ -44,11 +52,13 @@ export function Field({ label, hint, error, required = false, hideLabel, id, cla
   const auto = useId();
   const controlId = id ?? `np-f${auto}`;
   const hintId = hint ? `${controlId}-hint` : undefined;
-  const errorId = error ? `${controlId}-error` : undefined;
+  const hasMessage = error !== undefined && error !== null && error !== false && error !== true && error !== "";
+  const invalid = hasMessage || error === true;
+  const errorId = hasMessage ? `${controlId}-error` : undefined;
   const describedBy = [hintId, errorId].filter(Boolean).join(" ") || undefined;
   return (
-    <FieldContext.Provider value={{ id: controlId, describedBy, invalid: Boolean(error), required }}>
-      <div className={cx("np-field", Boolean(error) && "np-field--invalid", className)}>
+    <FieldContext.Provider value={{ id: controlId, describedBy, errorId, invalid, required }}>
+      <div className={cx("np-field", invalid && "np-field--invalid", className)}>
         <label htmlFor={controlId} className={cx("np-field__label", hideLabel && "np-sr-only")}>
           {label}
           {required ? (
@@ -64,28 +74,40 @@ export function Field({ label, hint, error, required = false, hideLabel, id, cla
             {hint}
           </p>
         ) : null}
-        {error ? (
-          <p id={errorId} className="np-field__error">
-            <WarningIcon size={16} />
-            <span>{error}</span>
-          </p>
-        ) : null}
+        {hasMessage ? <FieldError id={errorId}>{error}</FieldError> : null}
       </div>
     </FieldContext.Provider>
+  );
+}
+
+/**
+ * Error message line (warning icon + text) for custom compositions; `Field` renders one for its
+ * `error`. Inside a `Field`, the id defaults to the one its control already references.
+ */
+export function FieldError({ id, children, className }: { id?: string; children: ReactNode; className?: string }) {
+  const f = useContext(FieldContext);
+  return (
+    <p id={id ?? f?.errorId} className={cx("np-field__error", className)}>
+      <WarningIcon size={16} />
+      <span>{children}</span>
+    </p>
   );
 }
 
 function useControlProps(props: {
   id?: string;
   "aria-describedby"?: string;
+  "aria-errormessage"?: string;
   "aria-invalid"?: InputHTMLAttributes<HTMLInputElement>["aria-invalid"];
   required?: boolean;
 }) {
   const f = useContext(FieldContext);
+  const invalid = props["aria-invalid"] ?? (f?.invalid ? true : undefined);
   return {
     id: props.id ?? f?.id,
     "aria-describedby": cx(f?.describedBy, props["aria-describedby"]) || undefined,
-    "aria-invalid": props["aria-invalid"] ?? (f?.invalid ? true : undefined),
+    "aria-invalid": invalid,
+    "aria-errormessage": props["aria-errormessage"] ?? (invalid ? f?.errorId : undefined),
     required: props.required ?? (f?.required || undefined),
   };
 }
@@ -170,6 +192,24 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(function Select
         {children}
       </select>
       <ChevronDownIcon size={20} className="np-select__chevron" />
+    </div>
+  );
+});
+
+export interface TextareaProps extends TextareaHTMLAttributes<HTMLTextAreaElement> {
+  /** `vertical` (default) lets people resize the height; `none` fixes it. */
+  resize?: "vertical" | "none";
+}
+
+/** Multi-line text field (refund reason, notes, descriptions). Picks up `Field` wiring like `Input`. */
+export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(function Textarea(
+  { resize = "vertical", rows = 4, className, ...rest },
+  ref,
+) {
+  const wiring = useControlProps(rest);
+  return (
+    <div className={cx("np-textarea", resize === "none" && "np-textarea--fixed", className)}>
+      <textarea ref={ref} rows={rows} className="np-textarea__control" {...rest} {...wiring} />
     </div>
   );
 });

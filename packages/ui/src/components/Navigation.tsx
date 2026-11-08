@@ -1,5 +1,6 @@
 import { type KeyboardEvent, type ReactNode, useId, useRef } from "react";
 import { cx } from "../cx.js";
+import { type LinkRenderer, renderAnchor } from "./Link.js";
 
 /* ------------------------------------------------------------------------------------------ */
 /* Tabs                                                                                         */
@@ -147,7 +148,16 @@ export interface BreadcrumbItem {
 }
 
 /** "Acme Studio / Payments". The last item is the current page. */
-export function Breadcrumb({ items, className }: { items: readonly BreadcrumbItem[]; className?: string }) {
+export function Breadcrumb({
+  items,
+  renderLink = renderAnchor,
+  className,
+}: {
+  items: readonly BreadcrumbItem[];
+  /** Client-side routing for crumb links. */
+  renderLink?: LinkRenderer;
+  className?: string;
+}) {
   return (
     <nav aria-label="Breadcrumb" className={cx("np-breadcrumb", className)}>
       <ol className="np-breadcrumb__list">
@@ -159,9 +169,7 @@ export function Breadcrumb({ items, className }: { items: readonly BreadcrumbIte
               {last || !it.href ? (
                 <span aria-current={last ? "page" : undefined}>{it.label}</span>
               ) : (
-                <a href={it.href} className="np-breadcrumb__link">
-                  {it.label}
-                </a>
+                renderLink({ href: it.href, className: "np-breadcrumb__link", children: it.label })
               )}
               {last ? null : (
                 <span className="np-breadcrumb__sep" aria-hidden="true">

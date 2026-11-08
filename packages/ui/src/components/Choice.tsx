@@ -1,4 +1,5 @@
 import {
+  type ButtonHTMLAttributes,
   type ChangeEvent,
   createContext,
   forwardRef,
@@ -11,7 +12,7 @@ import {
   useState,
 } from "react";
 import { cx } from "../cx.js";
-import { CheckIcon, ChevronDownIcon, SearchIcon } from "../icons/index.js";
+import { CheckIcon, ChevronDownIcon, ChevronRightIcon, SearchIcon } from "../icons/index.js";
 
 /* ------------------------------------------------------------------------------------------ */
 /* Checkbox                                                                                     */
@@ -213,6 +214,37 @@ export function SelectionCard({ title, description, avatar, action, className }:
   );
 }
 
+export interface OptionButtonProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, "title"> {
+  title: ReactNode;
+  description?: ReactNode;
+  /** Leading avatar initial ("U") or custom node (icon). */
+  avatar?: ReactNode;
+  /** Trailing content; defaults to a chevron (the row navigates or opens something). */
+  trailing?: ReactNode;
+}
+
+/**
+ * Option-card row that is a button ("Connect a wallet", "Send from an exchange", a workspace in a
+ * list): looks like an `OptionCard` but performs an action instead of selecting a radio value.
+ */
+export const OptionButton = forwardRef<HTMLButtonElement, OptionButtonProps>(function OptionButton(
+  { title, description, avatar, trailing, className, type = "button", ...rest },
+  ref,
+) {
+  return (
+    <button ref={ref} type={type} className={cx("np-option", "np-option--button", className)} {...rest}>
+      {typeof avatar === "string" ? <Avatar initial={avatar} size="sm" /> : avatar}
+      <span className="np-option__text">
+        <span className="np-option__title">{title}</span>
+        {description ? <span className="np-option__description">{description}</span> : null}
+      </span>
+      <span className="np-option__indicator np-option__indicator--center" aria-hidden="true">
+        {trailing ?? <ChevronRightIcon size={16} />}
+      </span>
+    </button>
+  );
+});
+
 /* ------------------------------------------------------------------------------------------ */
 /* Combobox-lite: searchable inline listbox ("Pay with", "Choose a network")                   */
 /* ------------------------------------------------------------------------------------------ */
@@ -245,7 +277,10 @@ export interface ComboboxProps {
   /** Controlled query (optional). */
   query?: string;
   onQueryChange?: (query: string) => void;
+  /** Content between the search box and the list (e.g. network filter chips, a notice). */
+  beforeList?: ReactNode;
   className?: string;
+  "data-testid"?: string;
 }
 
 /** Case- and accent-insensitive "every word matches" filter. */
@@ -277,7 +312,9 @@ export function Combobox({
   empty,
   query: controlledQuery,
   onQueryChange,
+  beforeList,
   className,
+  "data-testid": testId,
 }: ComboboxProps) {
   const auto = useId();
   const inputId = `np-cb${auto}`;
@@ -342,7 +379,7 @@ export function Combobox({
   };
 
   return (
-    <div className={cx("np-combobox", `np-combobox--${variant}`, className)}>
+    <div className={cx("np-combobox", `np-combobox--${variant}`, className)} data-testid={testId}>
       <label htmlFor={inputId} className={cx("np-field__label", hideLabel && "np-sr-only")}>
         {label}
       </label>
@@ -370,6 +407,7 @@ export function Combobox({
           <SearchIcon size={20} />
         </span>
       </div>
+      {beforeList ? <div className="np-combobox__slot">{beforeList}</div> : null}
       {listLabel ? (
         <div className="np-combobox__list-label" id={`${listId}-label`}>
           {listLabel}

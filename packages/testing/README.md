@@ -5,6 +5,7 @@ Test utilities: Testcontainers fixtures with the stack's pinned images, a fake c
 - `startPostgres`, `startNats`, `startValkey`, `IMAGES`; `provisionServiceDatabase(adminUrl, service)` (migrator/app roles like `postgres-init`)
 - `account`, `settlementDestination`, `internalSettlementDestination`, `paymentIntent`, `checkoutSession`, `balanceTransaction`, `execution`, `agentPayment`, `domainEvent`
 - `eventProbe(natsUrl)`, `expectEvent(probe, subject, matcher)`
+- `testEnv(vars)` (`NP_ENV=test` + your `NP_*` variables — `NP_ENV` is required since 0.2.1), `testConfig(overrides)` (a `BaseConfig` with `env: "test"`), `TEST_ENV`
 - `mintTestToken`, `testKeySource`, `testSigningKey`; `fakeClock`
 - `mockPeer({service, routes})` — a spec-driven mock of a peer service (validated requests, authorized callers, validated responses, recorded calls); `mockError`, `mintServiceToken`, `testServiceToken`
 

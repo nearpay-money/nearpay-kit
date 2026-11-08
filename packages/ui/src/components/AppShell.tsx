@@ -1,8 +1,10 @@
-import { type ReactNode, useEffect, useId, useRef, useState } from "react";
+import { type MouseEvent, type ReactNode, useCallback, useEffect, useId, useRef, useState } from "react";
 import { cx } from "../cx.js";
 import { CaretDownIcon, CloseIcon, MenuIcon, NearPayMark } from "../icons/index.js";
 import { IconButton } from "./Button.js";
 import { ModePill } from "./Display.js";
+import { type LinkRenderer, renderAnchor } from "./Link.js";
+import { MenuButton, type MenuEntry } from "./Overlay.js";
 
 export interface NavItem {
   id: string;
@@ -19,18 +21,42 @@ export interface NavGroup {
   items: readonly NavItem[];
 }
 
+export interface AppShellWorkspace {
+  name: string;
+  subtitle?: string;
+  /** Button mode: called when the switcher is pressed (e.g. to open a dialog). */
+  onSwitch?: () => void;
+  /** Menu mode: the switcher opens a menu of workspaces/actions. */
+  menu?: { items: readonly MenuEntry[]; onSelect: (id: string) => void; label?: string };
+}
+
 export interface AppShellProps {
   /** Brand block; defaults to the NearPay mark + wordmark. */
   brand?: ReactNode;
-  workspace: { name: string; subtitle?: string; onSwitch?: () => void };
+  /**
+   * Workspace block: a menu (`menu`), a button (`onSwitch`), or — with neither — a static,
+   * non-interactive label (single-workspace users, ops console).
+   */
+  workspace: AppShellWorkspace;
   nav: readonly NavGroup[];
   /** Links under the nav ("Help & support"). */
   footerLinks?: readonly { label: string; href: string }[];
+  /** Actions at the bottom of the sidebar, e.g. a "Sign out" button. */
+  footerActions?: ReactNode;
   user?: { name: string; role?: string };
   /** Usually a `<Breadcrumb>`. */
   breadcrumb?: ReactNode;
   /** Live/Test pill in the top bar. */
   mode?: "live" | "test";
+  /** Interactive mode control (e.g. a Live/Test `SegmentedControl`); replaces the static pill. */
+  modeSwitch?: ReactNode;
+  /** Controlled mobile drawer state (omit for internal state). */
+  navOpen?: boolean;
+  onNavOpenChange?: (open: boolean) => void;
+  /** Called when a nav item is activated; the mobile drawer closes afterwards. */
+  onNavigate?: (item: NavItem, event: MouseEvent<HTMLAnchorElement>) => void;
+  /** Renders nav and footer links (client-side routing). */
+  renderLink?: LinkRenderer;
   notifications?: { unread?: number; onClick?: () => void };
   /** Extra top-bar content, right side. */
   topbarActions?: ReactNode;
@@ -52,15 +78,22 @@ export function NearPayLogo({ className }: { className?: string }) {
 /**
  * Workspace shell: left sidebar (switcher, nav groups, footer) + top bar (breadcrumb, mode pill,
  * notifications) + main region. Below 960 px the sidebar becomes a drawer behind a menu button.
+ * The sidebar colour runs the full page height however long the content is.
  */
 export function AppShell({
   brand,
   workspace,
   nav,
   footerLinks = [],
+  footerActions,
   user,
   breadcrumb,
   mode,
+  modeSwitch,
+  navOpen,
+  onNavOpenChange,
+  onNavigate,
+  renderLink = renderAnchor,
   notifications,
   topbarActions,
   navLabel = "Workspace",
@@ -70,7 +103,15 @@ export function AppShell({
   const auto = useId();
   const sidebarId = `np-s${auto}`;
   const mainId = `np-main${auto}`;
-  const [open, setOpen] = useState(false);
+  const [ownOpen, setOwnOpen] = useState(false);
+  const open = navOpen ?? ownOpen;
+  const setOpen = useCallback(
+    (next: boolean) => {
+      if (navOpen === undefined) setOwnOpen(next);
+      onNavOpenChange?.(next);
+    },
+    [navOpen, onNavOpenChange],
+  );
   const menuRef = useRef<HTMLButtonElement>(null);
   const closeRef = useRef<HTMLButtonElement>(null);
   const wasOpen = useRef(false);
@@ -85,11 +126,22 @@ export function AppShell({
     }
     if (wasOpen.current) {
       wasOpen.current = false;
-      menuRef.current?.focus();
+      // Return focus to the menu button only if focus was left inside the closed drawer.
+      const active = document.activeElement;
+      if (!active || active === document.body || active.closest(".np-shell__sidebar")) menuRef.current?.focus();
     }
-  }, [open]);
+  }, [open, setOpen]);
 
   const unread = notifications?.unread ?? 0;
+  const switcherContent = (
+    <>
+      <span className="np-workspace-switcher__name">
+        {workspace.name}
+        <CaretDownIcon size={12} />
+      </span>
+      {workspace.subtitle ? <span className="np-workspace-switcher__sub">{workspace.subtitle}</span> : null}
+    </>
+  );
 
   return (
     <div className={cx("np-shell", open && "np-shell--nav-open", className)}>
@@ -107,18 +159,33 @@ export function AppShell({
             onClick={() => setOpen(false)}
           />
         </div>
-        <button
-          type="button"
-          className="np-workspace-switcher"
-          onClick={workspace.onSwitch}
-          aria-label={`Switch workspace, current: ${workspace.name}`}
-        >
-          <span className="np-workspace-switcher__name">
-            {workspace.name}
-            <CaretDownIcon size={12} />
-          </span>
-          {workspace.subtitle ? <span className="np-workspace-switcher__sub">{workspace.subtitle}</span> : null}
-        </button>
+        {workspace.menu ? (
+          <MenuButton
+            variant="plain"
+            label={workspace.menu.label ?? "Workspaces"}
+            triggerLabel={`Switch workspace, current: ${workspace.name}`}
+            items={workspace.menu.items}
+            onSelect={workspace.menu.onSelect}
+            className="np-workspace-switcher__anchor"
+            triggerClassName="np-workspace-switcher"
+          >
+            {switcherContent}
+          </MenuButton>
+        ) : workspace.onSwitch ? (
+          <button
+            type="button"
+            className="np-workspace-switcher"
+            onClick={workspace.onSwitch}
+            aria-label={`Switch workspace, current: ${workspace.name}`}
+          >
+            {switcherContent}
+          </button>
+        ) : (
+          <div className="np-workspace-switcher np-workspace-switcher--static">
+            <span className="np-workspace-switcher__name">{workspace.name}</span>
+            {workspace.subtitle ? <span className="np-workspace-switcher__sub">{workspace.subtitle}</span> : null}
+          </div>
+        )}
         <nav aria-label={navLabel} className="np-shell__nav">
           {nav.map((g, gi) => (
             // biome-ignore lint/suspicious/noArrayIndexKey: nav groups are static
@@ -131,14 +198,21 @@ export function AppShell({
               <ul className="np-nav-group__list" aria-labelledby={g.label ? `${sidebarId}-g${gi}` : undefined}>
                 {g.items.map((it) => (
                   <li key={it.id}>
-                    <a
-                      href={it.href}
-                      className={cx("np-nav-item", it.current && "np-nav-item--current")}
-                      aria-current={it.current ? "page" : undefined}
-                    >
-                      {it.icon}
-                      <span>{it.label}</span>
-                    </a>
+                    {renderLink({
+                      href: it.href,
+                      className: cx("np-nav-item", it.current && "np-nav-item--current"),
+                      "aria-current": it.current ? "page" : undefined,
+                      onClick: (e) => {
+                        onNavigate?.(it, e);
+                        if (open) setOpen(false);
+                      },
+                      children: (
+                        <>
+                          {it.icon}
+                          <span>{it.label}</span>
+                        </>
+                      ),
+                    })}
                   </li>
                 ))}
               </ul>
@@ -147,9 +221,9 @@ export function AppShell({
         </nav>
         <div className="np-shell__footer">
           {footerLinks.map((l) => (
-            <a key={l.href} href={l.href} className="np-shell__footer-link">
-              {l.label}
-            </a>
+            <span key={l.href} className="np-shell__footer-item">
+              {renderLink({ href: l.href, className: "np-shell__footer-link", children: l.label })}
+            </span>
           ))}
           {user ? (
             <p className="np-shell__user">
@@ -157,6 +231,7 @@ export function AppShell({
               {user.role ? ` · ${user.role}` : ""}
             </p>
           ) : null}
+          {footerActions ? <div className="np-shell__footer-actions">{footerActions}</div> : null}
         </div>
       </aside>
       <button
@@ -179,7 +254,7 @@ export function AppShell({
           />
           <div className="np-shell__breadcrumb">{breadcrumb}</div>
           <div className="np-shell__topbar-actions">
-            {mode ? <ModePill mode={mode} /> : null}
+            {modeSwitch ?? (mode ? <ModePill mode={mode} /> : null)}
             {topbarActions}
             {notifications ? (
               <button type="button" className="np-notifications" onClick={notifications.onClick}>

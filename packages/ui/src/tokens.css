@@ -87,6 +87,7 @@
   --np-shadow-focus: 0 0 0 2px var(--np-color-surface), 0 0 0 4px var(--np-color-focus);
   --np-z-overlay: 1000;
   --np-z-toast: 1100;
+  --np-z-popover: 900;
 
   /* Semantic colours — light */
   color-scheme: light;
@@ -117,6 +118,11 @@
   --np-color-inverse-text: #ffffff;
   --np-color-skeleton: #e9efed;
   --np-color-overlay: rgb(19 45 49 / 0.48);
+  /* Chart series, in fixed order (validated categorical palette; never cycled). */
+  --np-chart-1: #00826b;
+  --np-chart-2: #5b5bd6;
+  --np-chart-3: #b0417e;
+  --np-chart-4: #8a6a00;
 }
 
 [data-theme="dark"] {
@@ -148,6 +154,10 @@
   --np-color-inverse-text: #132d31;
   --np-color-skeleton: #24434a;
   --np-color-overlay: rgb(6 20 22 / 0.64);
+  --np-chart-1: #24a487;
+  --np-chart-2: #7a7cec;
+  --np-chart-3: #d65a98;
+  --np-chart-4: #ad8220;
   --np-shadow-overlay: 0 1px 2px rgb(0 0 0 / 0.2), 0 12px 32px rgb(0 0 0 / 0.4);
 }
 
@@ -181,6 +191,10 @@
     --np-color-inverse-text: #132d31;
     --np-color-skeleton: #24434a;
     --np-color-overlay: rgb(6 20 22 / 0.64);
+    --np-chart-1: #24a487;
+    --np-chart-2: #7a7cec;
+    --np-chart-3: #d65a98;
+    --np-chart-4: #ad8220;
     --np-shadow-overlay: 0 1px 2px rgb(0 0 0 / 0.2), 0 12px 32px rgb(0 0 0 / 0.4);
   }
 }

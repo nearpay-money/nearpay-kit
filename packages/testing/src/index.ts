@@ -2,6 +2,7 @@
 export { type FakeClock, fakeClock } from "./clock.js";
 export { IMAGES, type Started, startNats, startPostgres, startValkey } from "./containers.js";
 export { provisionServiceDatabase, type ServiceDatabase } from "./database.js";
+export { TEST_ENV, testConfig, testEnv } from "./env.js";
 export { type EventProbe, eventProbe, expectEvent, matchesPartial } from "./events.js";
 export {
   account,
