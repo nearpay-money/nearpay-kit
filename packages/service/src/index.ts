@@ -31,7 +31,9 @@ export { createMetrics, type ExternalCallResult, type ServiceMetrics, serveMetri
 export { parseQuery } from "./query.js";
 export {
   type BackgroundTask,
+  type BinaryBody,
   type BindingOptions,
+  binary,
   createService,
   type Handler,
   type IdempotencyScope,

@@ -1,6 +1,6 @@
 {
   "name": "@nearpay-internal/chains",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Chain registry (CAIP-2 \u2194 1Click codes), address validation and normalisation, finality, explorer URLs, destination keys and fingerprints.",
   "license": "Apache-2.0",
   "type": "module",

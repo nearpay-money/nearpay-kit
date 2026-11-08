@@ -6,6 +6,7 @@ import {
   createCheckoutSession,
   ErrorEnvelope,
   getCheckoutSession,
+  getInvoicePdf,
   getPaymentIntent,
   getPublicCheckoutSession,
   listPaymentIntents,
@@ -23,6 +24,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import {
   ApiError,
   type BaseConfig,
+  binary,
   createService,
   type IdempotencyStore,
   implement,
@@ -475,6 +477,66 @@ describe("handlers", () => {
       headers: { "x-nearpay-token": await secretKey() },
     });
     expect([res.statusCode, res.headers["x-existing"]]).toEqual([200, "true"]);
+  });
+
+  it("sends raw bytes for binaryResponse routes with binary() / ctx.binary()", async () => {
+    const pdf = new TextEncoder().encode("%PDF-1.7\n\x00\xff binary body");
+    const inv = newId("in");
+    const viaFn = make(
+      [implement(getInvoicePdf, async () => binary(pdf, "application/pdf", { "cache-control": "private, no-store" }))],
+      {
+        name: "billing",
+      },
+    );
+    const token = await secretKey();
+    const r1 = await viaFn.s.app.inject({ url: `/v1/invoices/${inv}/pdf`, headers: { "x-nearpay-token": token } });
+    expect(r1.statusCode).toBe(200);
+    expect(r1.headers["content-type"]).toBe("application/pdf");
+    expect(r1.headers["cache-control"]).toBe("private, no-store");
+    expect(r1.headers["x-request-id"]).toBeTruthy();
+    expect(r1.headers["content-length"]).toBe(String(pdf.byteLength));
+    expect(new Uint8Array(r1.rawPayload)).toEqual(pdf);
+    // a view into a larger buffer sends only its own bytes
+    const big = new Uint8Array(64);
+    big.set(pdf, 8);
+    const viaCtx = make(
+      [implement(getInvoicePdf, async (ctx) => ctx.binary(big.subarray(8, 8 + pdf.byteLength), "application/pdf"))],
+      {
+        name: "billing",
+      },
+    );
+    const r2 = await viaCtx.s.app.inject({ url: `/v1/invoices/${inv}/pdf`, headers: { "x-nearpay-token": token } });
+    expect(new Uint8Array(r2.rawPayload)).toEqual(pdf);
+  });
+
+  it("refuses bytes on JSON routes and a content type other than the route's", async () => {
+    const token = await secretKey();
+    const wrongType = make([implement(getInvoicePdf, async () => binary(new Uint8Array([1]), "text/html"))], {
+      name: "billing",
+    });
+    const inv = newId("in");
+    const r1 = await wrongType.s.app.inject({ url: `/v1/invoices/${inv}/pdf`, headers: { "x-nearpay-token": token } });
+    expect(r1.statusCode).toBe(500);
+    expect(wrongType.logs.lines.find((l) => l.msg === "unhandled error")).toMatchObject({
+      err: { message: expect.stringContaining("content type text/html is not application/pdf") },
+    });
+    const logOnly = make([implement(getInvoicePdf, async () => binary(new Uint8Array([1]), "text/html"))], {
+      name: "billing",
+      responseValidation: "log",
+    });
+    const r2 = await logOnly.s.app.inject({ url: `/v1/invoices/${inv}/pdf`, headers: { "x-nearpay-token": token } });
+    expect(r2.statusCode).toBe(200);
+    expect(logOnly.logs.lines.find((l) => l.msg === "response violates the contract")).toMatchObject({
+      route: "getInvoicePdf",
+    });
+    const onJson = make([
+      implement(getPaymentIntent, async () => binary(new Uint8Array([1]), "application/pdf") as never),
+    ]);
+    const r3 = await onJson.s.app.inject({
+      url: `/v1/payment_intents/${pi.id}`,
+      headers: { "x-nearpay-token": token },
+    });
+    expect(r3.statusCode).toBe(500);
   });
 
   it("runs handlers inside the request context and continues the caller's trace", async () => {
