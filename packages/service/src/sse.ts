@@ -17,7 +17,11 @@ export interface SseStream<E extends string = string> {
   onClose(fn: () => void): void;
   /** Bytes written but not yet flushed to the client (`res.writableLength`). */
   readonly buffered: number;
-  /** Resolves once the socket buffer has drained (immediately when it is empty or the stream closed). */
+  /**
+   * Resolves once the response can take more writes: immediately unless the last write hit the
+   * high-water mark (`res.writableNeedDrain`), else on `drain` or when the stream closes. Small
+   * buffered amounts never block (they may stay unsent until the client reads).
+   */
   drain(): Promise<void>;
 }
 
@@ -33,7 +37,11 @@ export interface SseLimits {
   readonly maxDurationMs?: number;
   /** A client is slow while more than this many bytes are unsent… */
   readonly maxBufferedBytes?: number;
-  /** …and is closed once it stays slow this long (checked with the heartbeat). Default 30 s. */
+  /**
+   * …and is closed once it stays slow this long (checked with the heartbeat). Default 30 s. Any close
+   * with more than `maxBufferedBytes` unsent (slow client, `maxDurationMs`, shutdown) destroys the
+   * socket instead of ending it, since `end()` would wait for a reader that never reads.
+   */
   readonly slowClientMs?: number;
 }
 
@@ -122,7 +130,9 @@ export function openSse<E extends string>(
     },
     close() {
       if (closed) return;
-      res.end();
+      // A reader that stopped reading would keep `end()` waiting forever to flush: drop it instead.
+      if (limits.maxBufferedBytes !== undefined && res.writableLength > limits.maxBufferedBytes) res.destroy();
+      else res.end();
       finish();
     },
     get closed() {
@@ -137,7 +147,7 @@ export function openSse<E extends string>(
       return res.writableLength;
     },
     drain() {
-      if (closed || res.writableLength === 0) return Promise.resolve();
+      if (closed || res.destroyed || !res.writableNeedDrain) return Promise.resolve();
       return new Promise<void>((resolve) => {
         const done = () => {
           res.off("drain", done);

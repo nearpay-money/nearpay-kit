@@ -88,6 +88,8 @@ export interface RequestContext<R extends AnyRoute = AnyRoute> {
   readonly reply: FastifyReply;
   /** Opens the route's server-sent-event stream (routes with `stream` only); `limits` on the first call only. */
   sse(limits?: SseLimits): SseStream<RouteEvents<R>>;
+  /** Same as {@link binary}: a raw-bytes response for routes with a spec `binaryResponse`. */
+  binary(bytes: Uint8Array, contentType: string, headers?: Record<string, string>): BinaryBody;
 }
 
 const RESPONDED = Symbol("nearpay.responded");
@@ -106,14 +108,40 @@ export function respond<T>(status: 200 | 201 | 202 | 204, body: T, headers: Reco
 
 const isResponded = (v: unknown): v is Responded<unknown> => typeof v === "object" && v !== null && RESPONDED in v;
 
+const BINARY = Symbol("nearpay.binary");
+
+/** A raw-bytes success body (spec `binaryResponse`, e.g. invoice PDFs), sent with the route's status. */
+export interface BinaryBody {
+  readonly [BINARY]: true;
+  readonly bytes: Uint8Array;
+  readonly contentType: string;
+  readonly headers: Readonly<Record<string, string>>;
+}
+
+/**
+ * Returns raw bytes from a route whose spec definition has `binaryResponse` (its `response` is null).
+ * `contentType` must match the route's `binaryResponse.contentType` (parameters ignored); `headers`
+ * adds e.g. `content-disposition` or `cache-control`. Binary responses are not stored for
+ * `Idempotency-Key` replay.
+ */
+export function binary(bytes: Uint8Array, contentType: string, headers: Record<string, string> = {}): BinaryBody {
+  return { [BINARY]: true, bytes, contentType, headers };
+}
+
+const isBinary = (v: unknown): v is BinaryBody => typeof v === "object" && v !== null && BINARY in v;
+const mediaType = (ct: string) => (ct.split(";")[0] ?? "").trim().toLowerCase();
+
 /** Body-less and streaming routes' handlers simply return (a `void` function). */
 // biome-ignore lint/suspicious/noConfusingVoidType: a handler without a return statement returns Promise<void>.
 type NoBody<R extends AnyRoute> = undefined extends RouteResponse<R> ? void : never;
 
-/** Returns the response body (or `respond(…)`); routes without a body and streaming routes return nothing. */
+/**
+ * Returns the response body (or `respond(…)`); routes without a body and streaming routes return
+ * nothing; `binaryResponse` routes return `binary(…)`.
+ */
 export type Handler<R extends AnyRoute> = (
   ctx: RequestContext<R>,
-) => Promise<RouteResponse<R> | Responded<RouteResponse<R>> | NoBody<R>>;
+) => Promise<RouteResponse<R> | Responded<RouteResponse<R>> | BinaryBody | NoBody<R>>;
 
 export interface BindingOptions {
   /** Request budget override in ms (default 10 000 public, 5 000 internal). */
@@ -593,6 +621,7 @@ export function createService(o: ServiceOptions): Service {
               });
               return s;
             },
+            binary,
           };
           const run = () =>
             runWithContext(
@@ -613,7 +642,27 @@ export function createService(o: ServiceOptions): Service {
 
           const execute = async () => {
             const result = await run();
-            const out = isResponded(result) ? result : { status: route.status, body: result, headers: {} };
+            if (isBinary(result)) {
+              if (!route.binaryResponse) throw new Error(`${route.id} returned bytes but has no binaryResponse`);
+              if (mediaType(result.contentType) !== mediaType(route.binaryResponse.contentType)) {
+                const problem = `content type ${result.contentType} is not ${route.binaryResponse.contentType}`;
+                if (validation === "enforce")
+                  throw new Error(`response of ${route.id} violates the contract: ${problem}`);
+                if (validation === "log") l.error({ route: route.id, problem }, "response violates the contract");
+              }
+              return {
+                status: route.status as number,
+                body: undefined,
+                headers: { ...result.headers },
+                binary: result,
+              };
+            }
+            const out: {
+              status: number;
+              body: unknown;
+              headers: Readonly<Record<string, string>>;
+              binary?: BinaryBody;
+            } = isResponded(result) ? result : { status: route.status, body: result, headers: {} };
             if (out.status < 200 || out.status > 299)
               throw new Error(`${route.id} responded with non-success status ${out.status}`);
             checkResponse(route, out.status, out.body, l);
@@ -622,8 +671,9 @@ export function createService(o: ServiceOptions): Service {
 
           let status: number;
           let resBody: unknown;
+          let resBinary: BinaryBody | undefined;
           let resHeaders: Record<string, string> = {};
-          if (route.idempotent && idempotencyKey && principal?.acct && o.idempotency) {
+          if (route.idempotent && idempotencyKey && principal?.acct && o.idempotency && !route.binaryResponse) {
             let extra: Record<string, string> = {};
             const r = await o.idempotency.run(
               {
@@ -647,10 +697,15 @@ export function createService(o: ServiceOptions): Service {
             const x = await execute();
             status = x.status;
             resBody = x.body;
+            resBinary = x.binary;
             resHeaders = { ...x.headers };
           }
-          if (reply.sent) return; // the budget expired and a 500 was already sent
+          if (reply.sent) return; // the budget expired (or the handler wrote the reply itself)
           reply.code(status).headers({ ...resHeaders, [HEADERS.requestId]: req.id });
+          if (resBinary) {
+            const b = resBinary.bytes;
+            return reply.type(resBinary.contentType).send(Buffer.from(b.buffer, b.byteOffset, b.byteLength));
+          }
           if (status === 204 || resBody === undefined) return reply.send();
           return reply.type("application/json; charset=utf-8").send(JSON.stringify(resBody));
         } catch (e) {
