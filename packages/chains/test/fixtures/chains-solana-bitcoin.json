@@ -1,0 +1,120 @@
+{
+  "_source": "@nearpay/spec 0.4.0 test-vectors/chains-solana-bitcoin.json (subset: omft.spl_mints, assets, addresses.bitcoin). Replace with the spec file once the kit depends on spec 0.4.0.",
+  "spl_mints": [
+    {
+      "mint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+      "keccak256_hex": "efbe3c8bf757b9786ac2301b5ce3bf3a31af18be40ba30f721101b4341690186",
+      "asset_id": "nep141:sol-5ce3bf3a31af18be40ba30f721101b4341690186.omft.near"
+    },
+    {
+      "mint": "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB",
+      "keccak256_hex": "56cd2dc04a01419d9a76dd51c800a4bd850783ccb82c2b2c7e84175443606352",
+      "asset_id": "nep141:sol-c800a4bd850783ccb82c2b2c7e84175443606352.omft.near"
+    }
+  ],
+  "assets": [
+    {
+      "asset_id": "nep141:sol-5ce3bf3a31af18be40ba30f721101b4341690186.omft.near",
+      "token": {
+        "standard": "spl",
+        "address": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
+      }
+    },
+    {
+      "asset_id": "nep141:sol-c800a4bd850783ccb82c2b2c7e84175443606352.omft.near",
+      "token": {
+        "standard": "spl",
+        "address": "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB"
+      }
+    }
+  ],
+  "bitcoin": [
+    {
+      "chain": "bip122:000000000019d6689c085ae165831e93",
+      "address": "bc1qpct5sxzppv204tth290uen85nqkhzw9sq5m0ku",
+      "valid": true,
+      "type": "p2wpkh",
+      "destination_allowed": true,
+      "normalized": "bc1qpct5sxzppv204tth290uen85nqkhzw9sq5m0ku"
+    },
+    {
+      "chain": "bip122:000000000019d6689c085ae165831e93",
+      "address": "bc1pzkakv8d86xwnrvzx262umfvz04dxjeegc4lez8aqdlx50zjfsr5qrjf5pr",
+      "valid": true,
+      "type": "p2tr",
+      "destination_allowed": true,
+      "normalized": "bc1pzkakv8d86xwnrvzx262umfvz04dxjeegc4lez8aqdlx50zjfsr5qrjf5pr"
+    },
+    {
+      "chain": "bip122:000000000019d6689c085ae165831e93",
+      "address": "BC1QPCT5SXZPPV204TTH290UEN85NQKHZW9SQ5M0KU",
+      "valid": true,
+      "type": "p2wpkh",
+      "destination_allowed": true,
+      "normalized": "bc1qpct5sxzppv204tth290uen85nqkhzw9sq5m0ku",
+      "note": "upper-case bech32 is valid and normalises to lower case"
+    },
+    {
+      "chain": "bip122:000000000019d6689c085ae165831e93",
+      "address": "bc1q9vza2e8x573nczrlzms0wvx3gsqjx7vavgkx0l",
+      "valid": true,
+      "type": "p2wpkh",
+      "destination_allowed": true,
+      "normalized": "bc1q9vza2e8x573nczrlzms0wvx3gsqjx7vavgkx0l"
+    },
+    {
+      "chain": "bip122:000000000019d6689c085ae165831e93",
+      "address": "12HWMKcfvshJ1dJo1kBX3jaguexKF5UeXY",
+      "valid": true,
+      "type": "p2pkh",
+      "destination_allowed": false,
+      "normalized": "12HWMKcfvshJ1dJo1kBX3jaguexKF5UeXY"
+    },
+    {
+      "chain": "bip122:000000000019d6689c085ae165831e93",
+      "address": "3EdC2tokZbqft8jYFdvN58YaCetzMUBRji",
+      "valid": true,
+      "type": "p2sh",
+      "destination_allowed": false,
+      "normalized": "3EdC2tokZbqft8jYFdvN58YaCetzMUBRji"
+    },
+    {
+      "chain": "bip122:000000000019d6689c085ae165831e93",
+      "address": "bc1qppsup2haejt8whm43a32rgwqtrvv0h46ts3ld6gje2xqrrczzj2sz0eetu",
+      "valid": true,
+      "type": "p2wsh",
+      "destination_allowed": false,
+      "normalized": "bc1qppsup2haejt8whm43a32rgwqtrvv0h46ts3ld6gje2xqrrczzj2sz0eetu"
+    },
+    {
+      "chain": "bip122:000000000019d6689c085ae165831e93",
+      "address": "bc1qpct5sxzppv204tth290uen85nqkhzw9sq5m0kq",
+      "valid": false,
+      "reason": "bech32 checksum mismatch"
+    },
+    {
+      "chain": "bip122:000000000019d6689c085ae165831e93",
+      "address": "bc1pzkakv8d86xwnrvzx262umfvz04dxjeegc4lez8aqdlx50zjfsr5qrjf5pq",
+      "valid": false,
+      "reason": "bech32m checksum mismatch"
+    },
+    {
+      "chain": "bip122:000000000019d6689c085ae165831e93",
+      "address": "bc1pzkakv8d86xwnrvzx262umfvz04dxjeegc4lez8aqdlx50zjfsr5qkwecyp",
+      "valid": false,
+      "reason": "witness v1 encoded with bech32 instead of bech32m"
+    },
+    {
+      "chain": "bip122:000000000019d6689c085ae165831e93",
+      "address": "bc1qpcT5SXZPPV204TTH290UEN85NQKHZW9SQ5M0KU",
+      "valid": false,
+      "reason": "mixed case"
+    },
+    {
+      "chain": "bip122:000000000019d6689c085ae165831e93",
+      "address": "tb1qpct5sxzppv204tth290uen85nqkhzw9s2jqud0",
+      "valid": false,
+      "reason": "testnet HRP (tb)"
+    }
+  ]
+}
