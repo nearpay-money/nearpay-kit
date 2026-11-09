@@ -3,6 +3,10 @@
 All packages in this repository share one version. Breaking changes bump the major version and
 carry a migration note here (semver, foundations §4).
 
+## 0.4.0 — 2026-11-09
+
+- chains: `splAssetId(mint)`, `bitcoinAddressType`; spec 0.4.1.
+
 ## Unreleased
 
 ### chains — Stage 4 helpers (for 0.4.0)

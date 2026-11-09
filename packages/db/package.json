@@ -1,6 +1,6 @@
 {
   "name": "@nearpay-internal/db",
-  "version": "0.3.1",
+  "version": "0.4.0",
   "description": "Postgres helpers: Kysely, transactions, migrations, outbox/inbox, idempotency, jobs, leadership, envelope encryption.",
   "license": "Apache-2.0",
   "type": "module",
