@@ -315,3 +315,46 @@ export function destinationFingerprint(caip2: string, addressNorm: string, asset
   }
   return `${out.slice(0, 4)}-${out.slice(4, 8)}-${out.slice(8)}`;
 }
+
+// ---------------------------------------------------------------------------------------------
+// Stage 4 — Solana SPL asset ids and Bitcoin address types (lld/rails.md §21, identity §8.2)
+// ---------------------------------------------------------------------------------------------
+
+/**
+ * NEAR Intents asset id of a Solana SPL mint:
+ * `nep141:sol-<hex(keccak256(raw 32 mint bytes)[12..32])>.omft.near` (spec 0.4.0 chain vectors).
+ * Throws when `mint` is not base58 of exactly 32 bytes.
+ */
+export function splAssetId(mint: string): string {
+  const check = checkSolana(mint);
+  if (!check.ok) throw new RangeError(`${mint} is not a Solana mint: ${check.reason}`);
+  const hash = keccak_256(bs58.decode(mint)).slice(12);
+  return `nep141:sol-${[...hash].map((b) => b.toString(16).padStart(2, "0")).join("")}.omft.near`;
+}
+
+/** Bitcoin address type: the two destination types NearPay accepts, everything else valid is `other`. */
+export type BitcoinAddressType = "p2wpkh" | "p2tr" | "other";
+
+/** Bitcoin mainnet (CAIP-2). */
+export const BITCOIN_MAINNET = "bip122:000000000019d6689c085ae165831e93";
+
+/**
+ * Type of a valid address on a bitcoin-family chain (default Bitcoin mainnet): `p2wpkh` (witness v0,
+ * 20-byte program), `p2tr` (witness v1, 32-byte program) or `other` (P2PKH, P2SH, P2WSH, future
+ * witness versions); null when the address is invalid for the chain. Destinations allow
+ * `p2wpkh`/`p2tr` only (lld/identity.md §8.2).
+ */
+export function bitcoinAddressType(address: string, caip2: string = BITCOIN_MAINNET): BitcoinAddressType | null {
+  const c = getChain(caip2);
+  if (c?.family !== "bitcoin") throw new RangeError(`${caip2} is not a bitcoin-family chain`);
+  const r = validateAddress(caip2, address);
+  if (!r.ok) return null;
+  const hrp = (c.btc as NonNullable<ChainInfo["btc"]>).hrp;
+  if (!hrp || !r.normalized.startsWith(`${hrp}1`)) return "other";
+  const data = [...r.normalized.slice(hrp.length + 1)].map((ch) => B32.indexOf(ch));
+  const witver = data[0];
+  const prog = convertBits(data.slice(1, -6), 5, 8);
+  if (witver === 0 && prog?.length === 20) return "p2wpkh";
+  if (witver === 1 && prog?.length === 32) return "p2tr";
+  return "other";
+}

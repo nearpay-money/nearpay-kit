@@ -1,6 +1,6 @@
 {
   "name": "@nearpay-internal/testing",
-  "version": "0.3.1",
+  "version": "0.4.0",
   "description": "Test utilities: Testcontainers fixtures (Postgres, NATS, Valkey), fake clock, aggregate factories, event expectations, test tokens, spec-driven peer mocks.",
   "license": "Apache-2.0",
   "type": "module",
@@ -24,8 +24,8 @@
     "build": "node ../../scripts/build-package.mjs"
   },
   "dependencies": {
-    "@nearpay/spec": "0.3.0",
-    "@nearpay-internal/spec": "0.3.0",
+    "@nearpay/spec": "0.4.1",
+    "@nearpay-internal/spec": "0.4.1",
     "@nearpay-internal/ids": "workspace:*",
     "@nearpay-internal/auth": "workspace:*",
     "testcontainers": "11.14.0",

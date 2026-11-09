@@ -3,6 +3,22 @@
 All packages in this repository share one version. Breaking changes bump the major version and
 carry a migration note here (semver, foundations §4).
 
+## 0.4.0 — 2026-11-09
+
+- chains: `splAssetId(mint)`, `bitcoinAddressType`; spec 0.4.1.
+
+## Unreleased
+
+### chains — Stage 4 helpers (for 0.4.0)
+
+- `splAssetId(mint)`: NEAR Intents asset id of a Solana SPL mint,
+  `nep141:sol-<hex(keccak256(raw 32 mint bytes)[12..32])>.omft.near`; throws on a non-32-byte/non-base58 mint.
+- `bitcoinAddressType(address, caip2 = BITCOIN_MAINNET)`: `p2wpkh` | `p2tr` | `other` (P2PKH, P2SH, P2WSH,
+  other witness versions) | null (invalid); uses the package's own bech32/bech32m decoder (no new dependency).
+- `BITCOIN_MAINNET` constant. Tests check both against the spec 0.4.0 chain vectors (fixture copy in
+  `packages/chains/test/fixtures/`; switch to `@nearpay/spec/test-vectors/chains-solana-bitcoin.json` after the
+  spec bump). Spec dependency stays 0.3.0 (unchanged).
+
 ## 0.3.1 — 2026-11-08
 
 Patch release (Stage 3.2 change requests from webhooks and billing). No API removed or changed;
@@ -32,9 +48,9 @@ packages still build against spec **0.3.0**.
 ## 0.3.0 — 2026-11-08
 
 Stage 3 step 3.1 (agent-commerce). Additive; minor bump because every package now builds against
-spec 0.3.0.
+spec 0.4.1.
 
-### spec 0.3.0
+### spec 0.4.1
 
 - Every package depends on `@nearpay/spec` / `@nearpay-internal/spec` **0.3.0**.
 
