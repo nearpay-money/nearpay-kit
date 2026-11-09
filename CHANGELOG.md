@@ -13,7 +13,7 @@ carry a migration note here (semver, foundations §4).
   other witness versions) | null (invalid); uses the package's own bech32/bech32m decoder (no new dependency).
 - `BITCOIN_MAINNET` constant. Tests check both against the spec 0.4.0 chain vectors (fixture copy in
   `packages/chains/test/fixtures/`; switch to `@nearpay/spec/test-vectors/chains-solana-bitcoin.json` after the
-  spec bump). Spec dependency stays 0.3.1.
+  spec bump). Spec dependency stays 0.3.0 (unchanged).
 
 ## 0.3.1 — 2026-11-08
 
