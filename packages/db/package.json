@@ -24,7 +24,7 @@
     "build": "node ../../scripts/build-package.mjs"
   },
   "dependencies": {
-    "@nearpay-internal/spec": "0.3.0",
+    "@nearpay-internal/spec": "0.4.1",
     "@nearpay-internal/ids": "workspace:*",
     "kysely": "0.29.8",
     "pg": "8.23.1",

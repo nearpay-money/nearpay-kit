@@ -44,9 +44,9 @@ packages still build against spec **0.3.0**.
 ## 0.3.0 — 2026-11-08
 
 Stage 3 step 3.1 (agent-commerce). Additive; minor bump because every package now builds against
-spec 0.3.0.
+spec 0.4.1.
 
-### spec 0.3.0
+### spec 0.4.1
 
 - Every package depends on `@nearpay/spec` / `@nearpay-internal/spec` **0.3.0**.
 

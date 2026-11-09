@@ -24,8 +24,8 @@
     "build": "node ../../scripts/build-package.mjs"
   },
   "dependencies": {
-    "@nearpay/spec": "0.3.0",
-    "@nearpay-internal/spec": "0.3.0",
+    "@nearpay/spec": "0.4.1",
+    "@nearpay-internal/spec": "0.4.1",
     "@nearpay-internal/ids": "workspace:*",
     "@nearpay-internal/auth": "workspace:*",
     "testcontainers": "11.14.0",
