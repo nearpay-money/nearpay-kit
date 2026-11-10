@@ -596,7 +596,7 @@ describe("Icons as SVG strings", () => {
       expect(b.innerHTML, name).toBe(a.innerHTML);
     }
     expect(ICON_NAMES).toContain("nearpay-mark");
-    expect(renderToStaticMarkup(<NearPayMark />)).toContain('fill="currentColor"');
+    expect(renderToStaticMarkup(<NearPayMark variant="mono" />)).toContain('fill="currentColor"');
   });
   it("titles are escaped and labelled; unknown names throw; no style attributes", () => {
     const svg = iconSvg("check", { size: 16, title: 'Done <"ok">', className: "x", titleId: "t1" });

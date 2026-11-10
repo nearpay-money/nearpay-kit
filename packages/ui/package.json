@@ -1,7 +1,7 @@
 {
   "name": "@nearpay-internal/ui",
-  "version": "0.4.0",
-  "description": "NearPay design system: tokens, component CSS and thin accessible React 19 components.",
+  "version": "0.5.0",
+  "description": "NearPay design system: tokens, brand assets, component CSS and thin accessible React 19 components.",
   "license": "Apache-2.0",
   "type": "module",
   "sideEffects": [
@@ -20,6 +20,11 @@
       "types": "./dist/icons/svg.d.ts",
       "import": "./dist/icons/svg.js"
     },
+    "./brand": {
+      "types": "./dist/brand.d.ts",
+      "import": "./dist/brand.js"
+    },
+    "./brand/*": "./brand/*",
     "./tokens.css": "./dist/tokens.css",
     "./styles.css": "./dist/styles.css",
     "./fonts.css": "./dist/fonts.css",
@@ -28,6 +33,7 @@
   },
   "files": [
     "dist",
+    "brand",
     "README.md",
     "LICENSE"
   ],
@@ -36,6 +42,7 @@
   },
   "scripts": {
     "build": "node ../../scripts/build-package.mjs",
+    "brand": "tsx scripts/build-brand.ts",
     "gallery:dev": "vite --config gallery/vite.config.ts",
     "gallery:build": "vite build --config gallery/vite.config.ts"
   },
@@ -54,18 +61,22 @@
   "peerDependencies": {
     "react": "^19.0.0"
   },
-  "dependencies": {
-    "@fontsource-variable/dm-sans": "5.3.0"
-  },
   "devDependencies": {
+    "@fontsource/instrument-sans": "5.3.0",
+    "@resvg/resvg-js": "2.6.2",
     "@testing-library/dom": "10.4.2",
     "@testing-library/react": "16.3.3",
     "@testing-library/user-event": "14.6.8",
     "@types/react": "19.3.0",
     "@types/react-dom": "19.3.0",
     "jsdom": "31.0.0",
+    "opentype.js": "2.0.0",
     "react": "19.3.1",
     "react-dom": "19.3.1",
-    "vite": "5.4.21"
+    "vite": "5.4.21",
+    "wawoff2": "2.0.1"
+  },
+  "dependencies": {
+    "@fontsource-variable/instrument-sans": "5.3.0"
   }
 }

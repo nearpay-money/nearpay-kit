@@ -3,6 +3,78 @@
 All packages in this repository share one version. Breaking changes bump the major version and
 carry a migration note here (semver, foundations §4).
 
+## ui 0.5.0 — 2026-11-11 (design v2, "Convergence")
+
+`@nearpay-internal/ui` only; the other packages stay at 0.4.0 (unchanged, not republished). Visual redesign to the
+owner-approved v2 identity (brief: design-v2, artboards Logo / Checkout-proposed / Dashboard-proposed / Main). Minor bump
+on 0.x: token names, class names and component APIs are kept where possible; the few renames are listed below.
+
+### Tokens v2
+
+- Palette replaced: navy `#12263F` (dark surfaces, primary text), teal `#007A68` / hover `#005C4F` (actions, links),
+  brand teal `#00A38C` (marks only), violet `#5B5BD6` (routes + focus ring; `#B4B4FF` on navy), mint `#8EF0D3`
+  (accents on navy only), canvas `#F3F6F9`, borders `#E1E7EE`, outline `#C9D3DE`. Dark theme is navy-based.
+- New semantic tokens: `text-tertiary`, `border-subtle`, `border-outline`, `route`, `info-bg/fg` (Confirming),
+  `warning-subtle`, `warning-strong`, `navy`, `navy-raised`, `navy-border`, `navy-active`, `on-navy`,
+  `on-navy-secondary`, `on-navy-muted`, `on-navy-accent`, `on-navy-route`; primitives `--np-navy*`, `--np-violet*`,
+  `--np-teal-brand`, `--np-border-outline`, `--np-on-navy*`; `--np-radius-panel`, `--np-radius-pill`,
+  `--np-focus-width`/`-offset`, `--np-shadow-on-navy`, `--np-text-title|stat|amount-hero`, `--np-weight-strong|bold`,
+  `--np-tracking-title`.
+- `.np-surface-navy` scope (tokens.css): re-maps every semantic colour for content on navy, in both themes.
+- Focus ring: 3 px violet, offset 2 px, everywhere (inputs included). Merchant appearance (`applyAppearance`: accent,
+  radius, theme) unchanged; card / panel / pill radii now derive from the merchant radius (12 → 16 / 24 / pill).
+- Contrast test extended to every new pair (both themes) and to the navy scope: all text ≥ 4.5:1, UI ≥ 3:1. Text-field
+  borders stay ≥ 3:1 (`#7A8CA2`); the lighter artboard outline `#C9D3DE` is `border-outline`, used only on labelled
+  controls (secondary buttons, picker cards).
+
+### Type
+
+- Instrument Sans (OFL) self-hosted from `@fontsource-variable/instrument-sans` (variable 400–700, so 650 headings);
+  DM Sans removed. Headings tight (−0.02…−0.045em), tabular numerals on amounts (`np-tabular`, alias `np-num`).
+
+### Brand
+
+- `NearPayMark` (variants `auto`, `light`, `dark`/`onNavy`, `mono`, `app-icon`; favicon weights ≤ 20 px) and
+  `NearPayLogo` (`sm|md|lg|xl`) with the exact Convergence geometry; React-free `@nearpay-internal/ui/brand`
+  (`markSvg`, `logoSvg` with an outlined 650 wordmark, `faviconSvg`, constants).
+- `brand/` ships in the package (`@nearpay-internal/ui/brand/*`): SVG marks/logos, `favicon.svg`, `favicon.ico`
+  (16/32/48), `apple-touch-icon.png`, `icon-192/512.png`, `icon-maskable-512.png`, `og-image.png` (1200 × 630). Built by
+  `scripts/build-brand.ts` (`pnpm brand`; dev-only: opentype.js, wawoff2, @resvg/resvg-js, @fontsource/instrument-sans).
+
+### Components
+
+- New: `KpiCard` / `KpiGrid`, `ModeSwitch`, `PickerTrigger` + `np-picker*` styles (same structure as the checkout's
+  picker), `RouteDiagram` / `RouteChip` / `RouteArrow`, `ConvergenceHero` (SMIL `animateMotion` + `beginElement`, one dot
+  every ~2.4 s on a random route with an arrival pulse, static under `prefers-reduced-motion`, no inline styles),
+  `NearPayMarkIcon`, `ChevronUpDownIcon`.
+- `Button`: `quiet` (= 0.4 `ghost`, kept), `on-navy`, `navy`, `lg`, `pill`. `IconButton`: `on-navy`.
+- `AppShell` v2: navy sidebar, avatar workspace switcher (`workspace.initial`), sentence-case / hidden group labels
+  (`NavGroup.hideLabel`), top-bar `search`, `mode` + `onModeChange` (Live/Test switch), stacked navy bar on mobile.
+- `StatusBadge` v2 pairs (`progress` tone), `Callout` (`verified`, `progress`, `compact`, custom icon), `Card` (`variant`
+  `outline|flat|navy`, radius 16), `Table` (`title`, `actions`, `variant="flat"`, `muted` columns; 14 px rows, quiet
+  header), `CheckoutFrame` (hosted order summary on navy; split layout ≥ 880 px; `securedLabel`; mark in the footer).
+- Gallery redrawn: every component light/dark, brand page, and the three references (checkout review, dashboard home,
+  landing hero). `Money` untouched.
+
+### Migration (consumers)
+
+| 0.4                                                                                                     | 0.5                                                               | Action                                                             |
+| ------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------- | ------------------------------------------------------------------ |
+| `NearPayMark` (icon: filled "N", `currentColor`)                                                        | `NearPayMark` brand component (brand colours, `variant`)          | For one-colour use pass `variant="mono"` or use `NearPayMarkIcon`. |
+| `iconSvg("nearpay-mark")` "N"                                                                           | Convergence mark (one colour)                                     | None; for brand colours use `markSvg()` from `/brand`.             |
+| `NearPayLogo` exported from `AppShell`                                                                  | exported from `Brand` (same import path `@nearpay-internal/ui`)   | None; optional `size`, `variant`, `label`.                         |
+| `Button variant="ghost"`                                                                                | `variant="quiet"`                                                 | Optional (ghost still works and still emits `np-button--ghost`).   |
+| `statusTone("Confirming" \| "Payment detected" \| "Pending")` = `warning`                               | `progress` (`np-badge--progress`, violet)                         | Update CSS/tests that expect `np-badge--warning` for these.        |
+| `statusTone("Not paid" \| "Not submitted")` = `warning`                                                 | `neutral`                                                         | Same.                                                              |
+| `Tone` union                                                                                            | adds `"progress"`                                                 | Add a case to exhaustive switches.                                 |
+| `Callout icon?: boolean`                                                                                | `boolean \| ReactNode`; tone `verified` shows a shield by default | Pass `icon={false}` to hide it.                                    |
+| Table body cells in secondary colour                                                                    | primary text colour                                               | Mark secondary columns `muted: true`.                              |
+| `--np-color-focus` = accent                                                                             | violet `#5B5BD6` (merchant accent still overrides it)             | None.                                                              |
+| `--np-size-field` 56, `--np-size-sidebar` 224, `--np-size-gutter-workspace` 48, `--np-radius-control` 8 | 52, 248, 40, 12                                                   | Check layouts that hard-code the old sizes.                        |
+| `"DM Sans Variable"`                                                                                    | `"Instrument Sans Variable"`                                      | Replace any hard-coded font name; keep importing `fonts.css`.      |
+| AppShell menu button in the top bar                                                                     | in `.np-shell__mobilebar` (label "Open menu" unchanged)           | Update CSS that targets `.np-shell__topbar .np-shell__menu`.       |
+| Nav group / menu headings uppercase                                                                     | sentence case                                                     | None.                                                              |
+
 ## 0.4.0 — 2026-11-09
 
 - chains: `splAssetId(mint)`, `bitcoinAddressType`; spec 0.4.1.

@@ -1,6 +1,6 @@
-import { forwardRef, type HTMLAttributes, type ReactNode } from "react";
+import { forwardRef, type HTMLAttributes, type ReactNode, useId } from "react";
 import { cx } from "../cx.js";
-import { CheckIcon, ClockIcon, InfoIcon, WarningIcon } from "../icons/index.js";
+import { CheckIcon, ClockIcon, InfoIcon, ShieldCheckIcon, WarningIcon } from "../icons/index.js";
 import { formatMoneyParts, type MoneyFormatOptions } from "../money.js";
 
 /* ------------------------------------------------------------------------------------------ */
@@ -8,16 +8,34 @@ import { formatMoneyParts, type MoneyFormatOptions } from "../money.js";
 /* ------------------------------------------------------------------------------------------ */
 
 export interface CardProps extends HTMLAttributes<HTMLDivElement> {
-  /** `md` = 24 px (default), `sm` = 16 px, `none` = 0 (tables, media). */
+  /** `md` = 20–24 px (default), `sm` = 16 px, `none` = 0 (tables, media). */
   padding?: "none" | "sm" | "md";
+  /**
+   * `outline` (default) — white with a fine border, for white pages. `flat` — white, no border, for
+   * the dashboard canvas. `navy` — a navy surface; kit components inside re-colour themselves.
+   */
+  variant?: "outline" | "flat" | "navy";
   as?: "div" | "section" | "article" | "aside";
 }
 
+/** Surface with a 16 px radius (follows the merchant radius in the checkout). */
 export const Card = forwardRef<HTMLDivElement, CardProps>(function Card(
-  { padding = "md", as: Tag = "div", className, ...rest },
+  { padding = "md", variant = "outline", as: Tag = "div", className, ...rest },
   ref,
 ) {
-  return <Tag ref={ref} className={cx("np-card", `np-card--pad-${padding}`, className)} {...rest} />;
+  return (
+    <Tag
+      ref={ref}
+      className={cx(
+        "np-card",
+        `np-card--pad-${padding}`,
+        variant !== "outline" && `np-card--${variant}`,
+        variant === "navy" && "np-surface-navy",
+        className,
+      )}
+      {...rest}
+    />
+  );
 });
 
 export function CardTitle({
@@ -36,41 +54,74 @@ export function CardTitle({
 /* Callout                                                                                      */
 /* ------------------------------------------------------------------------------------------ */
 
-export type Tone = "info" | "warning" | "success" | "danger" | "neutral";
+/**
+ * Status tones (v2 pairs): `success` (Paid — green on mint), `progress` (Confirming — violet),
+ * `warning` (Review — amber on cream), `danger` (Failed), `neutral` (Not paid), `info` (soft mint,
+ * the brand's informational colour).
+ */
+export type Tone = "info" | "progress" | "warning" | "success" | "danger" | "neutral";
+
+/** Callout tones: every status tone plus `verified` (soft mint with a shield, e.g. "Payout address verified"). */
+export type CalloutTone = Tone | "verified";
 
 export interface CalloutProps extends Omit<HTMLAttributes<HTMLDivElement>, "title"> {
-  /** `info` (soft mint), `warning` (warm cream), `success`, `danger`, `neutral`. */
-  tone?: Tone;
+  /** `info` / `verified` (soft mint), `warning` (cream), `success`, `progress`, `danger`, `neutral`. */
+  tone?: CalloutTone;
   title: ReactNode;
   children?: ReactNode;
   /** Reference line, e.g. "Reference NP-10482 · Acme Studio". */
   reference?: ReactNode;
-  /** Show the tone icon. Default false (the Figma callouts are text-only). */
-  icon?: boolean;
+  /** Show the tone icon (`true`), a custom icon, or none. Default: none, except `verified` (shield). */
+  icon?: boolean | ReactNode;
+  /** One-line banner (title only, 12 px radius, tight padding) — e.g. the checkout's verified line. */
+  compact?: boolean;
   /** Announce politely when the callout appears or changes (status updates). */
   live?: boolean;
 }
 
-const TONE_ICON = { info: InfoIcon, warning: WarningIcon, success: CheckIcon, danger: WarningIcon, neutral: InfoIcon };
+const TONE_ICON = {
+  info: InfoIcon,
+  verified: ShieldCheckIcon,
+  progress: ClockIcon,
+  warning: WarningIcon,
+  success: CheckIcon,
+  danger: WarningIcon,
+  neutral: InfoIcon,
+};
 
 export function Callout({
   tone = "info",
   title,
   children,
   reference,
-  icon = false,
+  icon,
+  compact = false,
   live,
   className,
   ...rest
 }: CalloutProps) {
   const Icon = TONE_ICON[tone];
+  const showIcon = icon ?? tone === "verified";
+  const iconNode =
+    showIcon === true ? (
+      <Icon size={compact ? 16 : 20} className="np-callout__icon" />
+    ) : showIcon ? (
+      <span className="np-callout__icon">{showIcon}</span>
+    ) : null;
   return (
     <div
-      className={cx("np-callout", `np-callout--${tone}`, icon && "np-callout--icon", className)}
+      className={cx(
+        "np-callout",
+        `np-callout--${tone === "verified" ? "info" : tone}`,
+        tone === "verified" && "np-callout--verified",
+        iconNode && "np-callout--icon",
+        compact && "np-callout--compact",
+        className,
+      )}
       role={live ? "status" : undefined}
       {...rest}
     >
-      {icon ? <Icon size={20} className="np-callout__icon" /> : null}
+      {iconNode}
       <div className="np-callout__content">
         <p className="np-callout__title">{title}</p>
         {children ? <div className="np-callout__body">{children}</div> : null}
@@ -86,9 +137,8 @@ export function Callout({
 
 /**
  * Status vocabulary → tone. Labels are always shown as text (never colour alone).
- * Payment: Paid, Confirming, Payment detected, Pending, Review, Under review, Failed, Not paid,
- * Not submitted, Return pending, Returned, Expired. Objects: Active, Cooling off, Open, Past due,
- * Draft, Revoked. Modes: Live, Test.
+ * v2 pairs: Paid → success, Confirming → progress (violet), Review → warning, Not paid → neutral,
+ * Failed → danger. Objects: Active, Cooling off, Open, Past due, Draft, Revoked. Modes: Live, Test.
  */
 export const STATUS_TONES: Readonly<Record<string, Tone>> = {
   paid: "success",
@@ -103,9 +153,11 @@ export const STATUS_TONES: Readonly<Record<string, Tone>> = {
   ready: "success",
   verified: "success",
   reviewed: "success",
-  confirming: "warning",
-  "payment detected": "warning",
-  pending: "warning",
+  confirming: "progress",
+  "payment detected": "progress",
+  pending: "progress",
+  processing: "progress",
+  sending: "progress",
   review: "warning",
   "under review": "warning",
   "pending review": "warning",
@@ -113,11 +165,12 @@ export const STATUS_TONES: Readonly<Record<string, Tone>> = {
   "cooling off": "warning",
   open: "warning",
   "past due": "warning",
+  delayed: "warning",
   test: "warning",
-  "not paid": "warning",
-  "not submitted": "warning",
   "return pending": "warning",
   "action needed": "warning",
+  "not paid": "neutral",
+  "not submitted": "neutral",
   failed: "danger",
   expired: "danger",
   blocked: "danger",
@@ -223,6 +276,57 @@ export function Stat({ label, value, sub, trend = "neutral", className }: StatPr
 /** Row of stats (renders a `<dl>` grid). */
 export function StatGroup({ children, className }: { children: ReactNode; className?: string }) {
   return <dl className={cx("np-stat-group", className)}>{children}</dl>;
+}
+
+export interface KpiCardProps extends Omit<HTMLAttributes<HTMLDivElement>, "title"> {
+  label: ReactNode;
+  /** The figure — usually `<Money …/>` or a count. Rendered with tabular numerals. */
+  value: ReactNode;
+  /** Line under the value ("Up from $105.00 last week", "of 12 started", or a link). */
+  sub?: ReactNode;
+  /** Colours `sub` for deltas; the text must still say which way it moved. */
+  trend?: "up" | "down" | "neutral";
+  /** `default` (white card) or `warning` (cream: "Needs attention"). */
+  tone?: "default" | "warning";
+  /** Add a fine border (for white pages; the dashboard canvas needs none). */
+  outlined?: boolean;
+}
+
+/**
+ * Dashboard KPI tile: label, a 32 px tabular figure and a sub-line, on a 16 px-radius card. A
+ * labelled group, so it reads as "Settled volume, $830.00, Up from $105.00 last week".
+ */
+export function KpiCard({
+  label,
+  value,
+  sub,
+  trend = "neutral",
+  tone = "default",
+  outlined = false,
+  className,
+  ...rest
+}: KpiCardProps) {
+  const id = useId();
+  return (
+    // biome-ignore lint/a11y/useSemanticElements: a labelled group of text, not a form fieldset
+    <div
+      role="group"
+      aria-labelledby={`np-kpi${id}`}
+      className={cx("np-kpi", tone === "warning" && "np-kpi--warning", outlined && "np-kpi--outlined", className)}
+      {...rest}
+    >
+      <p id={`np-kpi${id}`} className="np-kpi__label">
+        {label}
+      </p>
+      <p className="np-kpi__value">{value}</p>
+      {sub ? <p className={cx("np-kpi__sub", trend !== "neutral" && `np-kpi__sub--${trend}`)}>{sub}</p> : null}
+    </div>
+  );
+}
+
+/** Responsive grid of `KpiCard`s (four across on wide screens, wrapping to fit). */
+export function KpiGrid({ children, className }: { children: ReactNode; className?: string }) {
+  return <div className={cx("np-kpi-grid", className)}>{children}</div>;
 }
 
 /* ------------------------------------------------------------------------------------------ */

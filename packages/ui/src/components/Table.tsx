@@ -10,8 +10,10 @@ export interface TableColumn<T> {
   header: ReactNode;
   cell: (row: T) => ReactNode;
   align?: "start" | "end";
-  /** Primary column: 14 px ink text, holds the row link when `rowHref` is set. */
+  /** Primary column: semibold ink text, holds the row link when `rowHref` is set. */
   primary?: boolean;
+  /** Secondary text colour (dates, "Paid with"). */
+  muted?: boolean;
   /** Use tabular numerals (amounts, times). */
   numeric?: boolean;
   /** Hide below 720 px container width. */
@@ -37,11 +39,22 @@ export interface TableProps<T> {
   empty?: ReactNode;
   /** Footer (e.g. `<Pager>`). */
   footer?: ReactNode;
+  /** Visible heading inside the table panel ("Recent payments"); also the panel's accessible name. */
+  title?: ReactNode;
+  /** Heading level of `title`. Default 2. */
+  titleLevel?: 2 | 3;
+  /** Actions next to the title ("View all"). */
+  actions?: ReactNode;
+  /**
+   * `outline` (default) — bordered, 16 px radius. `flat` — no border (on the dashboard canvas, or
+   * inside a `Card`).
+   */
+  variant?: "outline" | "flat";
   className?: string;
   "data-testid"?: string;
 }
 
-/** Dense data table: muted header, 56 px rows, row hover, loading and empty states. */
+/** Data table (v2): quiet header row, 14 px rows with hairline rules, row hover, loading and empty states. */
 export function Table<T>({
   caption,
   showCaption,
@@ -54,20 +67,35 @@ export function Table<T>({
   loadingRows = 3,
   empty,
   footer,
+  title,
+  titleLevel = 2,
+  actions,
+  variant = "outline",
   className,
   "data-testid": testId,
 }: TableProps<T>) {
+  const H = titleLevel === 2 ? "h2" : "h3";
   const colClass = (c: TableColumn<T>) =>
     cx(
       c.align === "end" && "np-table__cell--end",
       c.primary && "np-table__cell--primary",
+      c.muted && "np-table__cell--muted",
       c.numeric && "np-tabular",
       c.hideOnNarrow && "np-table__cell--wide-only",
       c.className,
     );
   const showEmpty = !loading && rows.length === 0;
   return (
-    <div className={cx("np-table-wrap", className)} data-testid={testId}>
+    <div
+      className={cx("np-table-wrap", `np-table-wrap--${variant}`, title != null && "np-table-wrap--titled", className)}
+      data-testid={testId}
+    >
+      {title != null || actions ? (
+        <div className="np-table__header">
+          {title != null ? <H className="np-table__title">{title}</H> : <span />}
+          {actions ? <div className="np-table__actions">{actions}</div> : null}
+        </div>
+      ) : null}
       <div className="np-table-scroll">
         <table className="np-table" aria-busy={loading || undefined}>
           <caption className={cx("np-table__caption", !showCaption && "np-sr-only")}>{caption}</caption>

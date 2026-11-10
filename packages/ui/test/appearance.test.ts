@@ -29,9 +29,15 @@ const hex = fc
 
 describe("merchant accent (embedded checkout)", () => {
   it("keeps the brand accent unchanged on light", () => {
-    const t = deriveAccent("#087a68", "light");
-    expect(t["--np-color-accent"]).toBe("#087a68");
+    const t = deriveAccent(color.light.accent, "light");
+    expect(t["--np-color-accent"]).toBe(color.light.accent);
     expect(t["--np-color-on-accent"]).toBe("#ffffff");
+    expect(t["--np-color-accent-text"]).toBe(color.light.accentText);
+  });
+  it("keeps the brand mint unchanged on dark, with a navy label", () => {
+    const t = deriveAccent(color.dark.accent, "dark");
+    expect(t["--np-color-accent"]).toBe(color.dark.accent);
+    expect(t["--np-color-on-accent"]).toBe(color.dark.onAccent);
   });
   for (const theme of ["light", "dark"] as const) {
     it(`guarantees AA for any accent on ${theme}`, () => {

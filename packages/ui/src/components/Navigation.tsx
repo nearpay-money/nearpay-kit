@@ -139,6 +139,45 @@ export function SegmentedControl({ items, value, onChange, label, size = "md", c
 }
 
 /* ------------------------------------------------------------------------------------------ */
+/* ModeSwitch                                                                                   */
+/* ------------------------------------------------------------------------------------------ */
+
+export type Mode = "live" | "test";
+
+export interface ModeSwitchProps {
+  value: Mode;
+  onChange: (mode: Mode) => void;
+  /** Accessible name of the group. Default "Mode". */
+  label?: string;
+  /** Visible labels. Default "Live" / "Test". */
+  labels?: { live: string; test: string };
+  className?: string;
+}
+
+/** Live / Test switch for the top bar: a pill segmented control (radiogroup, roving focus). */
+export function ModeSwitch({
+  value,
+  onChange,
+  label = "Mode",
+  labels = { live: "Live", test: "Test" },
+  className,
+}: ModeSwitchProps) {
+  return (
+    <SegmentedControl
+      label={label}
+      value={value}
+      onChange={(id) => onChange(id === "test" ? "test" : "live")}
+      size="sm"
+      className={cx("np-mode-switch", className)}
+      items={[
+        { id: "live", label: labels.live },
+        { id: "test", label: labels.test },
+      ]}
+    />
+  );
+}
+
+/* ------------------------------------------------------------------------------------------ */
 /* Breadcrumb                                                                                   */
 /* ------------------------------------------------------------------------------------------ */
 

@@ -21,6 +21,7 @@ import {
   Input,
   KeyValueList,
   Money,
+  NearPayLogo,
   palette,
   SearchInput,
   SelectionCard,
@@ -31,12 +32,11 @@ import {
   type ThemeSetting,
   ToastProvider,
 } from "../../src/index.js";
-import { CheckoutReview, DashboardOverview, fixedNow, PaymentDetail, PhoneFrame } from "./compositions.js";
+import { CheckoutReview, DashboardOverview, fixedNow, LandingHero, PaymentDetail, PhoneFrame } from "./compositions.js";
 import {
   ActivityDemo,
   BadgesDemo,
   ButtonsDemo,
-  CalloutsDemo,
   CardsDemo,
   ChoiceDemo,
   ComboboxDemo,
@@ -61,6 +61,20 @@ import {
   SvgIconsDemo,
   TextareaDemo,
 } from "./demos-021.js";
+import {
+  BrandDemo,
+  BrandFilesDemo,
+  ButtonsV2Demo,
+  CalloutsV2Demo,
+  ConvergenceDemo,
+  KpiDemo,
+  LogoRulesDemo,
+  ModeSwitchDemo,
+  NavySurfaceDemo,
+  PickerDemo,
+  RouteDemo,
+  StatusPairsDemo,
+} from "./demos-050.js";
 
 /* ------------------------------------------------------------------------------------------ */
 
@@ -99,26 +113,41 @@ function Section({ id, title, lede, children }: { id: string; title: string; led
 /* ------------------------------------------------------------------------------------------ */
 
 const SWATCHES: Array<[string, string, string]> = [
-  ["Deep ink", palette.ink, "g-sw-ink"],
-  ["NearPay teal", palette.teal, "g-sw-teal"],
+  ["Navy", palette.navy, "g-sw-navy"],
+  ["Navy raised", palette.navyRaised, "g-sw-navy-raised"],
+  ["Navy active", palette.navyActive, "g-sw-navy-active"],
+  ["Teal (actions)", palette.teal, "g-sw-teal"],
   ["Teal hover", palette.tealHover, "g-sw-teal-hover"],
-  ["Mint accent", palette.mint, "g-sw-mint"],
+  ["Brand teal (marks)", palette.tealBrand, "g-sw-teal-brand"],
+  ["Violet (routes, focus)", palette.violet, "g-sw-violet"],
+  ["Violet on navy", palette.violetOnNavy, "g-sw-violet-navy"],
+  ["Mint (on navy only)", palette.mint, "g-sw-mint"],
   ["Soft mint", palette.mintSoft, "g-sw-mint-soft"],
-  ["Warm canvas", palette.canvas, "g-sw-canvas"],
-  ["Fine borders", palette.borderFine, "g-sw-border"],
+  ["Canvas", palette.canvas, "g-sw-canvas"],
+  ["Borders", palette.borderFine, "g-sw-border"],
+  ["Control outline", palette.borderOutline, "g-sw-outline"],
 ];
 
 const PAIRS: Array<[string, keyof typeof color.light, keyof typeof color.light, number]> = [
   ["Body text / surface", "text", "surface", 4.5],
   ["Secondary text / canvas", "textSecondary", "bg", 4.5],
+  ["Tertiary text / canvas", "textTertiary", "bg", 4.5],
   ["On accent / accent", "onAccent", "accent", 4.5],
   ["Accent text / surface", "accentText", "surface", 4.5],
-  ["Accent / soft mint", "accentSubtleText", "accentSubtle", 4.5],
-  ["Success", "successFg", "successBg", 4.5],
-  ["Warning", "warningFg", "warningBg", 4.5],
-  ["Danger", "dangerFg", "dangerBg", 4.5],
+  ["Verified / soft mint", "accentSubtleText", "accentSubtle", 4.5],
+  ["Paid", "successFg", "successBg", 4.5],
+  ["Confirming", "infoFg", "infoBg", 4.5],
+  ["Review", "warningFg", "warningBg", 4.5],
+  ["Warning callout", "warningFg", "warningSubtle", 4.5],
+  ["Not paid", "neutralFg", "neutralBg", 4.5],
+  ["Failed", "dangerFg", "dangerBg", 4.5],
+  ["Nav text / navy", "onNavySecondary", "navy", 4.5],
+  ["Muted / navy raised", "onNavyMuted", "navyRaised", 4.5],
+  ["Current nav / navy active", "onNavy", "navyActive", 4.5],
+  ["Mint / navy", "onNavyAccent", "navy", 4.5],
   ["Control border / surface", "borderControl", "surface", 3],
   ["Focus ring / surface", "focus", "surface", 3],
+  ["Route / surface", "route", "surface", 3],
 ];
 
 function Foundations() {
@@ -164,16 +193,22 @@ function Foundations() {
         ))}
       </div>
       <div className="g-type">
-        <p className="np-text-display">Payments, with clarity.</p>
-        <p className="np-text-h1">Make room for your next idea.</p>
-        <p className="np-text-h2">Your payments, in focus.</p>
-        <p className="np-text-h3">Payment activity</p>
-        <p className="np-text-h4">Live payments are not active yet</p>
-        <p className="np-text-body">16 · A calm, familiar payment experience. Complexity stays behind the scenes.</p>
-        <p className="np-text-small">14 · Track every payment from checkout to settlement.</p>
-        <p className="np-text-caption np-text-secondary">12 · Funds settle directly to your chosen wallet.</p>
+        <p className="np-text-display">Get paid from any chain.</p>
+        <p className="np-text-h1">A payment, from wallet to wallet, in seconds.</p>
+        <p className="np-text-h2">Good morning, Acme</p>
+        <p className="np-text-title">Pay with</p>
+        <p className="np-text-h3">The customer pays their way</p>
+        <p className="np-text-h4">Recent payments</p>
+        <p className="np-text-body">
+          16 · Your customers pay with the wallet and token they already have. NearPay never holds the money.
+        </p>
+        <p className="np-text-small">14 · Funds settle straight to your payout wallet.</p>
+        <p className="np-text-caption np-text-tertiary">13 · Confirmed after one block on each chain.</p>
         <p className="g-type__amount np-tabular">
-          <Money amount="4900" decimals={2} symbol="$" /> · <Money amount="2486000" decimals={2} symbol="$" />
+          <Money amount="200" decimals={2} symbol="$" /> · <Money amount="2005013" decimals={6} symbol="USDC" />
+        </p>
+        <p className="np-text-caption np-text-secondary">
+          Instrument Sans (OFL), self-hosted · weights 400 / 500 / 600 / 650 / 700 · tabular numerals for amounts.
         </p>
       </div>
       <div className="g-space">
@@ -331,57 +366,6 @@ function CheckoutStates() {
   );
 }
 
-function DesktopCheckout() {
-  return (
-    <CheckoutFrame
-      merchant={MERCHANT}
-      amount={AMOUNT}
-      onBack={() => {}}
-      links={LINKS}
-      summary={
-        <>
-          <h2 className="np-text-h3">Pro plan</h2>
-          <p className="np-text-secondary">
-            One workspace. Unlimited projects.
-            <br />
-            Billed monthly.
-          </p>
-          <hr className="np-divider" />
-          <KeyValueList
-            items={[
-              { label: "Subtotal", value: <Money amount="4900" decimals={2} symbol="$" /> },
-              { label: "Payment fees", value: <Money amount="49" decimals={2} symbol="$" /> },
-              { label: "Total", value: <Money amount="4949" decimals={2} symbol="$" />, total: true },
-            ]}
-          />
-        </>
-      }
-    >
-      <h2 className="np-text-h3">Review your payment</h2>
-      <SelectionCard
-        avatar="U"
-        title="USDC · Base"
-        description="Wallet 0x71…9A42"
-        action={
-          <button type="button" className="np-link-button">
-            Change
-          </button>
-        }
-      />
-      <div>
-        <KeyValueList items={[{ label: "You send", value: <Money amount="49490000" decimals={6} symbol="USDC" /> }]} />
-        <p className="np-checkout__note">Any additional network fee is shown in your wallet before approval.</p>
-      </div>
-      <div className="np-stack">
-        <Button fullWidth>Pay 49.49 USDC</Button>
-        <Button fullWidth variant="secondary">
-          Send from another wallet
-        </Button>
-      </div>
-    </CheckoutFrame>
-  );
-}
-
 function AppearanceDemo() {
   const [theme, setTheme] = useState<ThemeSetting>("light");
   const [accent, setAccent] = useState("#4f46e5");
@@ -429,17 +413,25 @@ function AppearanceDemo() {
 
 const TOC: Array<[string, string]> = [
   ["foundations", "Foundations"],
+  ["brand", "Brand · logo"],
   ["ref-checkout", "Ref A · Checkout review"],
-  ["ref-overview", "Ref B · Dashboard overview"],
-  ["ref-detail", "Ref C · Payment detail"],
+  ["ref-overview", "Ref B · Dashboard home"],
+  ["ref-landing", "Ref C · Landing hero"],
+  ["ref-detail", "Payment detail"],
   ["checkout-states", "Checkout states"],
   ["appearance", "Merchant appearance"],
   ["buttons", "Button · IconButton"],
+  ["navy", "Navy surfaces"],
+  ["kpi", "KPI cards"],
+  ["picker", "Picker trigger"],
+  ["route", "RouteDiagram"],
+  ["hero", "ConvergenceHero"],
+  ["mode", "ModeSwitch"],
+  ["callouts", "Callout"],
+  ["badges", "StatusBadge"],
   ["fields", "Field · Input · Select"],
   ["combobox", "Combobox (Pay with)"],
   ["choice", "OptionCard · Checkbox"],
-  ["callouts", "Callout"],
-  ["badges", "StatusBadge"],
   ["money", "Money · Stat · KeyValue"],
   ["table", "Table · Pager"],
   ["navigation", "Tabs · Segmented · PageHeader"],
@@ -449,7 +441,6 @@ const TOC: Array<[string, string]> = [
   ["loading", "Skeleton · EmptyState"],
   ["cards", "Card"],
   ["icons", "Icons"],
-  ["new-021", "— New in 0.2.1 —"],
   ["textarea", "Textarea · field errors"],
   ["error-state", "ErrorState"],
   ["copy-text", "CopyText · IdText"],
@@ -466,11 +457,12 @@ function App() {
   return (
     <ThemeRoot theme="light" className="g-app">
       <header className="g-header">
-        <p className="g-header__eyebrow">@nearpay-internal/ui · v0.2.1</p>
+        <NearPayLogo size="lg" />
+        <p className="g-header__eyebrow">@nearpay-internal/ui 0.5.0 · design v2</p>
         <h1 className="np-text-h1">NearPay design system</h1>
         <p className="g-header__lede">
-          Tokens, components and reference screens rebuilt from the owner’s Figma. Every component is shown in light and
-          dark. Nothing here uses inline styles; the page runs under the checkout CSP rules.
+          Tokens, brand, components and the three approved reference screens in the v2 identity. Every component is
+          shown in light and dark. Nothing here uses inline styles; the page follows the checkout CSP rules.
         </p>
       </header>
       <div className="g-layout">
@@ -492,30 +484,42 @@ function App() {
             <Foundations />
           </Section>
           <Section
-            id="ref-checkout"
-            title="Reference A — Checkout, mobile review"
-            lede="USDC · Base selected; purchase, payer fees and total to send on separate rows; one primary action."
+            id="brand"
+            title="Brand — A. Convergence"
+            lede="Routes from many chains meet one settlement dot. NearPayMark (auto, light, dark, mono, app icon) and NearPayLogo in four sizes; files ship in @nearpay-internal/ui/brand/."
           >
+            <Pair>{() => <BrandDemo />}</Pair>
+            <Pair single>{() => <BrandFilesDemo />}</Pair>
+            <Pair single>{() => <LogoRulesDemo />}</Pair>
+          </Section>
+          <Section
+            id="ref-checkout"
+            title="Reference A — Hosted checkout, review"
+            lede="Split layout from 880 px: navy order side (merchant, amount, lines, route) and the white pay side (verified payout address, pickers, breakdown, one primary action)."
+          >
+            <ThemeRoot theme="light" className="g-desktop g-desktop--checkout">
+              <CheckoutReview wide />
+            </ThemeRoot>
+            <ThemeRoot theme="dark" className="g-desktop g-desktop--checkout">
+              <CheckoutReview wide />
+            </ThemeRoot>
             <div className="g-phones">
               <ThemeRoot theme="light">
-                <PhoneFrame label="Light">
+                <PhoneFrame label="Mobile · light">
                   <CheckoutReview />
                 </PhoneFrame>
               </ThemeRoot>
               <ThemeRoot theme="dark">
-                <PhoneFrame label="Dark (deep-ink surface, mint primary)" dark>
+                <PhoneFrame label="Mobile · dark" dark>
                   <CheckoutReview />
                 </PhoneFrame>
               </ThemeRoot>
             </div>
-            <ThemeRoot theme="light" className="g-desktop g-desktop--checkout">
-              <DesktopCheckout />
-            </ThemeRoot>
           </Section>
           <Section
             id="ref-overview"
-            title="Reference B — Dashboard overview"
-            lede="Workspace shell, stats, chart placeholder, recent payments."
+            title="Reference B — Dashboard home"
+            lede="Navy sidebar with the workspace switcher; search and Live/Test in the top bar; KPI cards, volume by source chain, payout wallet, recent payments."
           >
             <ThemeRoot theme="light" className="g-desktop">
               <DashboardOverview />
@@ -525,8 +529,20 @@ function App() {
             </ThemeRoot>
           </Section>
           <Section
+            id="ref-landing"
+            title="Reference C — Landing hero"
+            lede="nearpay.money: headline, active CTAs, and the ConvergenceHero — one payment at a time travels a route into the settlement point (static under reduced motion)."
+          >
+            <ThemeRoot theme="light" className="g-desktop">
+              <LandingHero />
+            </ThemeRoot>
+            <ThemeRoot theme="dark" className="g-desktop">
+              <LandingHero autoPlay={false} />
+            </ThemeRoot>
+          </Section>
+          <Section
             id="ref-detail"
-            title="Reference C — Payment detail"
+            title="Payment detail"
             lede="Gross, payer-sent and received amounts kept separate. “Refund payment” opens the dialog."
           >
             <ThemeRoot theme="light" className="g-desktop">
@@ -550,14 +566,57 @@ function App() {
           <Section
             id="buttons"
             title="Button · IconButton"
-            lede="Primary, secondary, ghost, danger, mint (on dark); disabled, loading “Processing…”, dense, full width."
+            lede="Primary (teal), secondary (outline), quiet, danger; lg / md / sm; pill for marketing; on-navy, navy and mint for dark surfaces. No arrows in labels."
           >
+            <Pair>{() => <ButtonsV2Demo />}</Pair>
             <Pair>{() => <ButtonsDemo />}</Pair>
+          </Section>
+          <Section
+            id="navy"
+            title="Navy surfaces"
+            lede="np-surface-navy re-maps the semantic colours for any content on navy."
+          >
+            <Pair>{() => <NavySurfaceDemo />}</Pair>
+          </Section>
+          <Section
+            id="kpi"
+            title="KPI cards"
+            lede="KpiGrid + KpiCard: 32 px tabular figures; the warning tone is the cream “Needs attention”."
+          >
+            <Pair>{() => <KpiDemo />}</Pair>
+          </Section>
+          <Section
+            id="picker"
+            title="Picker trigger"
+            lede="Label + value + optional balance; the chosen picker gets a 2 px teal border. Same structure classes as the checkout picker."
+          >
+            <Pair>{() => <PickerDemo />}</Pair>
+          </Section>
+          <Section
+            id="route"
+            title="RouteDiagram"
+            lede="“How your payment travels”: route chips joined by a dashed arrow; violet on light, mint on navy."
+          >
+            <Pair>{() => <RouteDemo />}</Pair>
+          </Section>
+          <Section
+            id="hero"
+            title="ConvergenceHero"
+            lede="Five curved routes into one settlement dot; a glowing dot travels a random route every 2.4 s and the point pulses on arrival. SMIL, no dependencies, no inline styles."
+          >
+            <Pair single>{() => <ConvergenceDemo />}</Pair>
+          </Section>
+          <Section
+            id="mode"
+            title="ModeSwitch"
+            lede="Live / Test in the top bar: a pill segmented control (radiogroup, arrow keys)."
+          >
+            <Pair>{() => <ModeSwitchDemo />}</Pair>
           </Section>
           <Section
             id="fields"
             title="Field · Input · SearchInput · Select"
-            lede="56 px fields, 16 px text, label + hint + error wiring, control borders ≥ 3:1."
+            lede="52 px fields, 16 px text, label + hint + error wiring, control borders ≥ 3:1."
           >
             <Pair>{() => <FieldsDemo />}</Pair>
           </Section>
@@ -571,10 +630,19 @@ function App() {
           <Section id="choice" title="RadioCardGroup · OptionCard · SelectionCard · Checkbox">
             <Pair>{() => <ChoiceDemo />}</Pair>
           </Section>
-          <Section id="callouts" title="Callout">
-            <Pair>{() => <CalloutsDemo />}</Pair>
+          <Section
+            id="callouts"
+            title="Callout"
+            lede="Verified / info in soft mint, warning in cream, progress in violet; compact one-line banners."
+          >
+            <Pair>{() => <CalloutsV2Demo />}</Pair>
           </Section>
-          <Section id="badges" title="StatusBadge · ModePill" lede="Status is always a word plus colour.">
+          <Section
+            id="badges"
+            title="StatusBadge · ModePill"
+            lede="v2 pairs: Paid, Confirming, Review, Not paid, Failed. Status is always a word plus colour."
+          >
+            <Pair>{() => <StatusPairsDemo />}</Pair>
             <Pair>{() => <BadgesDemo />}</Pair>
           </Section>
           <Section
@@ -611,9 +679,6 @@ function App() {
             lede="Inline SVG, 24 px grid, currentColor. No icon font, no remote assets."
           >
             <Pair>{() => <IconsDemo />}</Pair>
-          </Section>
-          <Section id="new-021" title="New in 0.2.1" lede="Gaps reported by the Stage 2 UI builders.">
-            <span />
           </Section>
           <Section id="textarea" title="Textarea · field-level error state">
             <Pair>{() => <TextareaDemo />}</Pair>

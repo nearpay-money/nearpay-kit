@@ -1,26 +1,38 @@
 import { type ButtonHTMLAttributes, forwardRef, type MouseEvent, type ReactNode } from "react";
 import { cx } from "../cx.js";
 
-export type ButtonVariant = "primary" | "secondary" | "ghost" | "danger" | "mint";
-export type ButtonSize = "md" | "sm";
+export type ButtonVariant = "primary" | "secondary" | "quiet" | "ghost" | "danger" | "on-navy" | "navy" | "mint";
+export type ButtonSize = "lg" | "md" | "sm";
 
 export interface ButtonStyleOptions {
-  /** `primary` (one per view), `secondary`, `ghost` (quiet), `danger`, `mint` (primary on dark surfaces). */
+  /**
+   * - `primary` — teal, white label; one per view.
+   * - `secondary` — white with an outline.
+   * - `quiet` — no fill until hovered (`ghost` is the 0.4 name, kept as an alias).
+   * - `danger` — destructive confirmations.
+   * - `on-navy` — white button for navy surfaces (sidebar, order side, dark bands).
+   * - `navy` — navy fill, white label (marketing header CTA on white).
+   * - `mint` — mint fill, navy label: the primary action on navy surfaces.
+   */
   variant?: ButtonVariant;
-  /** `md` = 48 px touch control (default); `sm` = 40 px dense desktop control. */
+  /** `lg` = 56 px (checkout pay, marketing hero), `md` = 48 px touch control (default), `sm` = 40 px dense. */
   size?: ButtonSize;
+  /** Fully rounded (marketing pages). */
+  pill?: boolean;
   fullWidth?: boolean;
 }
 
 /** Class names for a button look — use on `<a>` elements that navigate. */
 export function buttonClassName(
-  { variant = "primary", size = "md", fullWidth }: ButtonStyleOptions = {},
+  { variant = "primary", size = "md", pill, fullWidth }: ButtonStyleOptions = {},
   extra?: string,
 ) {
   return cx(
     "np-button",
-    `np-button--${variant}`,
-    size === "sm" && "np-button--sm",
+    `np-button--${variant === "ghost" ? "quiet" : variant}`,
+    variant === "ghost" && "np-button--ghost",
+    size !== "md" && `np-button--${size}`,
+    pill && "np-button--pill",
     fullWidth && "np-button--full",
     extra,
   );
@@ -43,6 +55,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
   {
     variant,
     size,
+    pill,
     fullWidth,
     loading = false,
     loadingText = "Processing…",
@@ -68,7 +81,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
       {...rest}
       ref={ref}
       type={type}
-      className={buttonClassName({ variant, size, fullWidth }, cx(loading && "np-button--loading", className))}
+      className={buttonClassName({ variant, size, pill, fullWidth }, cx(loading && "np-button--loading", className))}
       aria-busy={loading || undefined}
       aria-disabled={loading || rest["aria-disabled"] || undefined}
       onClick={handleClick}
@@ -93,7 +106,8 @@ export interface IconButtonProps extends Omit<ButtonHTMLAttributes<HTMLButtonEle
   /** Accessible name (required — the button shows only an icon). */
   label: string;
   icon: ReactNode;
-  variant?: "ghost" | "secondary";
+  /** `ghost` (default, quiet), `secondary` (outlined) or `on-navy` (quiet, on navy surfaces). */
+  variant?: "ghost" | "secondary" | "on-navy";
   size?: ButtonSize;
 }
 

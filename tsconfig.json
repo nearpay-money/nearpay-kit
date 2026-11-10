@@ -23,6 +23,7 @@
     "packages/*/test",
     "packages/ui/gallery/src",
     "packages/ui/gallery/vite.config.ts",
+    "packages/ui/scripts",
     "scripts",
     "vitest.workspace.ts",
     "vitest.shared.ts",
