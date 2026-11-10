@@ -32,7 +32,7 @@ export function IconBase({
     : {
         fill: "none",
         stroke: "currentColor",
-        strokeWidth: 1.75,
+        strokeWidth: shape.strokeWidth ?? 1.75,
         strokeLinecap: "round" as const,
         strokeLinejoin: "round" as const,
       };
@@ -67,6 +67,8 @@ export const WalletIcon = (p: IconProps) => <IconBase shape={S.WALLET} {...p} />
 export const SearchIcon = (p: IconProps) => <IconBase shape={S.SEARCH} {...p} />;
 export const ChevronDownIcon = (p: IconProps) => <IconBase shape={S.CHEVRON_DOWN} {...p} />;
 export const ChevronRightIcon = (p: IconProps) => <IconBase shape={S.CHEVRON_RIGHT} {...p} />;
+/** Up/down chevrons: a switcher that opens a list (workspace switcher). */
+export const ChevronUpDownIcon = (p: IconProps) => <IconBase shape={S.CHEVRON_UP_DOWN} {...p} />;
 export const CopyIcon = (p: IconProps) => <IconBase shape={S.COPY} {...p} />;
 export const ExternalLinkIcon = (p: IconProps) => <IconBase shape={S.EXTERNAL_LINK} {...p} />;
 export const CardIcon = (p: IconProps) => <IconBase shape={S.CARD} {...p} />;
@@ -80,8 +82,8 @@ export const LogOutIcon = (p: IconProps) => <IconBase shape={S.LOG_OUT} {...p} /
 export const MoreIcon = (p: IconProps) => <IconBase shape={S.MORE} {...p} />;
 /** Small filled caret used after select-like labels ("All payments ▾", workspace switcher). */
 export const CaretDownIcon = (p: IconProps) => <IconBase shape={S.CARET_DOWN} {...p} />;
-/** The NearPay "N" mark (filled, brand teal by default via currentColor). */
-export const NearPayMark = (p: IconProps) => <IconBase shape={S.NEARPAY_MARK} {...p} />;
+/** The NearPay mark as a one-colour icon (currentColor). For the brand colours use `NearPayMark`. */
+export const NearPayMarkIcon = (p: IconProps) => <IconBase shape={S.NEARPAY_MARK} {...p} />;
 
 export const icons = {
   "arrow-left": ArrowLeftIcon,
@@ -93,6 +95,7 @@ export const icons = {
   search: SearchIcon,
   "chevron-down": ChevronDownIcon,
   "chevron-right": ChevronRightIcon,
+  "chevron-up-down": ChevronUpDownIcon,
   copy: CopyIcon,
   "external-link": ExternalLinkIcon,
   card: CardIcon,

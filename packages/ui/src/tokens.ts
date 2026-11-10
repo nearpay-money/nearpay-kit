@@ -1,55 +1,98 @@
 /**
  * Design tokens — typed mirror of `tokens.css` (a test keeps the two in sync).
  *
- * Values were sampled from the owner's Figma ("NearPay — Payments Product Design"); see
- * `nearpay-brain/product/design-system.md` for the rationale behind each token.
+ * v2 (0.5.0): the owner-approved "Convergence" identity — navy surfaces, teal actions, violet for
+ * routes and focus, mint as an accent on navy only, Instrument Sans. Rationale and copy rules:
+ * `nearpay-brain/product/design-system.md`.
  */
 
 /** Brand primitives. Prefer the semantic `color` tokens in components. */
 export const palette = {
-  ink: "#132d31",
-  inkDeep: "#102c30",
-  teal: "#087a68",
-  tealHover: "#065e52",
-  tealPressed: "#054c43",
-  mint: "#65dfc0",
-  mintHover: "#85e8cf",
-  mintSoft: "#eaf5f1",
-  canvas: "#f7f9f8",
-  borderFine: "#dce5e3",
+  /** Navy — dark surfaces and primary text. */
+  ink: "#12263f",
+  /** Deeper navy: code blocks, text on mint. */
+  inkDeep: "#0f2136",
+  /** Primary actions (white label), links. */
+  teal: "#007a68",
+  tealHover: "#005c4f",
+  tealPressed: "#004a40",
+  /** Brand teal for marks on light surfaces (not for text). */
+  tealBrand: "#00a38c",
+  /** Accent on navy only — never text on white. */
+  mint: "#8ef0d3",
+  mintHover: "#b0f5e1",
+  /** Soft mint: verified / info callouts on light. */
+  mintSoft: "#e3f7f1",
+  /** Routes, cross-chain accents and the focus ring only (never buttons). */
+  violet: "#5b5bd6",
+  /** Violet on navy. */
+  violetOnNavy: "#b4b4ff",
+  canvas: "#f3f6f9",
+  subtle: "#f5f8fb",
+  borderFine: "#e1e7ee",
+  /** Secondary-button / picker-card outline (labelled controls; decorative contrast). */
+  borderOutline: "#c9d3de",
   white: "#ffffff",
+  /** Navy surface family (sidebar, hero panel, checkout order side, dark bands). */
+  navy: "#12263f",
+  navyRaised: "#1a3150",
+  navyChip: "#1d3653",
+  navyBorder: "#2e4b6c",
+  navyActive: "#24405f",
+  /** Text on navy. */
+  onNavy: "#ffffff",
+  onNavySecondary: "#c7d5e4",
+  onNavyMuted: "#a9bbcf",
+  /** Route chip label on navy. */
+  onNavyChip: "#e6eef6",
 } as const;
 
 export type ThemeName = "light" | "dark";
 export type ThemeSetting = ThemeName | "auto";
 
 export interface ColorTokens {
-  /** App background (warm canvas / deep ink). */
+  /** App background (canvas / deepest navy). */
   bg: string;
   /** Cards, inputs, tables. */
   surface: string;
-  /** Table headers, sidebar, disabled controls. */
+  /** Table headers, quiet panels, disabled controls. */
   surfaceMuted: string;
   text: string;
   textSecondary: string;
-  /** Fine borders: cards, dividers, table rules (decorative). */
+  /** Captions, placeholders, table headers (still ≥ 4.5:1). */
+  textTertiary: string;
+  /** Fine borders: cards, dividers (decorative). */
   border: string;
-  /** Form-control borders: ≥ 3:1 against surface (WCAG 1.4.11). */
+  /** Hairlines between table rows (decorative). */
+  borderSubtle: string;
+  /** Outline of labelled controls: secondary buttons, picker cards (decorative; the label identifies them). */
+  borderOutline: string;
+  /** Text-field / checkbox borders: ≥ 3:1 against surface and bg (WCAG 1.4.11). */
   borderControl: string;
   accent: string;
   accentHover: string;
   accentPressed: string;
   onAccent: string;
-  /** Accent used as text/icon on `surface` (links, checks, active nav). */
+  /** Accent used as text/icon on `surface` (links, checks). */
   accentText: string;
-  /** Soft mint: info callouts, active nav, avatars. */
+  /** Soft mint: verified / info callouts, selected rows. */
   accentSubtle: string;
   accentSubtleText: string;
+  /** Focus ring (violet). */
   focus: string;
+  /** Routes and cross-chain accents (violet): route lines, chips, the settlement dot. */
+  route: string;
   successBg: string;
   successFg: string;
+  /** "Confirming" / in-progress pill (violet pair). */
+  infoBg: string;
+  infoFg: string;
   warningBg: string;
   warningFg: string;
+  /** Cream warning callout / KPI background. */
+  warningSubtle: string;
+  /** Emphasised text on `warningSubtle` (KPI value). */
+  warningStrong: string;
   dangerBg: string;
   dangerFg: string;
   neutralBg: string;
@@ -58,100 +101,155 @@ export interface ColorTokens {
   inverseBg: string;
   inverseText: string;
   skeleton: string;
+  /** Navy surfaces (sidebar, order side, hero panel, dark bands). */
+  navy: string;
+  navyRaised: string;
+  navyBorder: string;
+  /** Current nav item on navy. */
+  navyActive: string;
+  onNavy: string;
+  onNavySecondary: string;
+  onNavyMuted: string;
+  /** Mint accent on navy (route arrows, marks, positive values). */
+  onNavyAccent: string;
+  /** Violet on navy (settlement dot, focus on navy). */
+  onNavyRoute: string;
 }
 
 export const color: Record<ThemeName, ColorTokens> = {
   light: {
-    bg: "#f7f9f8",
+    bg: "#f3f6f9",
     surface: "#ffffff",
-    surfaceMuted: "#f7f9f8",
-    text: "#132d31",
-    textSecondary: "#52676b",
-    border: "#dce5e3",
-    borderControl: "#7f928f",
-    accent: "#087a68",
-    accentHover: "#065e52",
-    accentPressed: "#054c43",
+    surfaceMuted: "#f7f9fb",
+    text: "#12263f",
+    textSecondary: "#4a5b70",
+    textTertiary: "#5a6b80",
+    border: "#e1e7ee",
+    borderSubtle: "#edf1f5",
+    borderOutline: "#c9d3de",
+    borderControl: "#7a8ca2",
+    accent: "#007a68",
+    accentHover: "#005c4f",
+    accentPressed: "#004a40",
     onAccent: "#ffffff",
-    accentText: "#087a68",
-    accentSubtle: "#eaf5f1",
-    accentSubtleText: "#087a68",
-    focus: "#087a68",
-    successBg: "#eaf6ee",
-    successFg: "#17744d",
-    warningBg: "#fff5e4",
-    warningFg: "#895710",
-    dangerBg: "#fceef0",
-    dangerFg: "#b44048",
-    neutralBg: "#eef2f1",
-    neutralFg: "#52676b",
-    inverseBg: "#132d31",
+    accentText: "#007a68",
+    accentSubtle: "#e3f7f1",
+    accentSubtleText: "#00594c",
+    focus: "#5b5bd6",
+    route: "#5b5bd6",
+    successBg: "#ddf7ef",
+    successFg: "#00594c",
+    infoBg: "#ececfd",
+    infoFg: "#3b3ba8",
+    warningBg: "#fff1d6",
+    warningFg: "#7a4b00",
+    warningSubtle: "#fff7e6",
+    warningStrong: "#5c3900",
+    dangerBg: "#fdecea",
+    dangerFg: "#b42318",
+    neutralBg: "#edf1f5",
+    neutralFg: "#4a5b70",
+    inverseBg: "#12263f",
     inverseText: "#ffffff",
-    skeleton: "#e9efed",
+    skeleton: "#e7ecf2",
+    navy: "#12263f",
+    navyRaised: "#1a3150",
+    navyBorder: "#2e4b6c",
+    navyActive: "#24405f",
+    onNavy: "#ffffff",
+    onNavySecondary: "#c7d5e4",
+    onNavyMuted: "#a9bbcf",
+    onNavyAccent: "#8ef0d3",
+    onNavyRoute: "#b4b4ff",
   },
   dark: {
-    bg: "#102c30",
-    surface: "#193a3f",
-    surfaceMuted: "#143236",
+    bg: "#0b1a2c",
+    surface: "#12263f",
+    surfaceMuted: "#0f2136",
     text: "#ffffff",
-    textSecondary: "#a9c0be",
-    border: "#2d4c50",
-    borderControl: "#6e8c8a",
-    accent: "#65dfc0",
-    accentHover: "#85e8cf",
-    accentPressed: "#4fd3b2",
-    onAccent: "#102c30",
-    accentText: "#65dfc0",
-    accentSubtle: "#1e4c45",
-    accentSubtleText: "#65dfc0",
-    focus: "#65dfc0",
-    successBg: "#173f37",
-    successFg: "#7fe0b5",
-    warningBg: "#3d3320",
-    warningFg: "#f2c879",
-    dangerBg: "#45262b",
-    dangerFg: "#ff9aa2",
-    neutralBg: "#24434a",
-    neutralFg: "#b3cac8",
+    textSecondary: "#c7d5e4",
+    textTertiary: "#a9bbcf",
+    border: "#2e4b6c",
+    borderSubtle: "#223a57",
+    borderOutline: "#3d5b7e",
+    borderControl: "#7189a6",
+    accent: "#8ef0d3",
+    accentHover: "#b0f5e1",
+    accentPressed: "#6fe3c1",
+    onAccent: "#12263f",
+    accentText: "#8ef0d3",
+    accentSubtle: "#17384a",
+    accentSubtleText: "#8ef0d3",
+    focus: "#b4b4ff",
+    route: "#b4b4ff",
+    successBg: "#133b3d",
+    successFg: "#8ef0d3",
+    infoBg: "#272c5e",
+    infoFg: "#c4c4ff",
+    warningBg: "#3a2f1c",
+    warningFg: "#ffd58a",
+    warningSubtle: "#2e2716",
+    warningStrong: "#ffe3b0",
+    dangerBg: "#45222a",
+    dangerFg: "#ffadad",
+    neutralBg: "#24405f",
+    neutralFg: "#c7d5e4",
     inverseBg: "#ffffff",
-    inverseText: "#132d31",
-    skeleton: "#24434a",
+    inverseText: "#12263f",
+    skeleton: "#24405f",
+    navy: "#0f2136",
+    navyRaised: "#1a3150",
+    navyBorder: "#2e4b6c",
+    navyActive: "#24405f",
+    onNavy: "#ffffff",
+    onNavySecondary: "#c7d5e4",
+    onNavyMuted: "#a9bbcf",
+    onNavyAccent: "#8ef0d3",
+    onNavyRoute: "#b4b4ff",
   },
 };
 
 /**
- * Chart series colours, in fixed order (`--np-chart-1…4`). Categorical palette validated for
- * lightness band, chroma, colour-vision-deficiency separation and ≥ 3:1 against the surface.
+ * Chart series colours, in fixed order (`--np-chart-1…4`): teal, violet, slate, amber. Each is
+ * ≥ 3:1 against the surface; series are never told apart by colour alone (legend + table).
  */
 export const chart: Record<ThemeName, readonly [string, string, string, string]> = {
-  light: ["#00826b", "#5b5bd6", "#b0417e", "#8a6a00"],
-  dark: ["#24a487", "#7a7cec", "#d65a98", "#ad8220"],
+  light: ["#007a68", "#5b5bd6", "#74879e", "#a35f00"],
+  dark: ["#8ef0d3", "#b4b4ff", "#9fb3c8", "#ffb86b"],
 };
 
 /** Type scale (px). Headings are tight; body uses a generous line height. */
 export const fontSize = {
-  display: 64,
+  /** Landing hero headline. */
+  display: 76,
   h1: 48,
-  h2: 32,
+  h2: 34,
   h3: 24,
-  h4: 20,
+  h4: 18,
   body: 16,
   small: 14,
-  caption: 12,
-  /** Checkout amount hero (sampled from the Figma; sits between h1 and h2). */
-  amount: 42,
+  caption: 13,
+  /** Screen titles in the checkout flow ("Pay with"). */
+  title: 30,
+  /** KPI / stat figures. */
+  stat: 32,
+  /** Checkout amount (mobile / single column). */
+  amount: 48,
+  /** Checkout amount on the navy order side. */
+  amountHero: 80,
 } as const;
 
-export const fontWeight = { regular: 400, medium: 500, semibold: 600 } as const;
+/** Instrument Sans is variable (400–700): 650 is the heading / wordmark weight. */
+export const fontWeight = { regular: 400, medium: 500, semibold: 600, strong: 650, bold: 700 } as const;
 
-export const lineHeight = { tight: 1.1, heading: 1.25, body: 1.5 } as const;
+export const lineHeight = { tight: 1.02, heading: 1.2, body: 1.55 } as const;
 
-/** Letter-spacing (em): tight headings, tighter amount hero. */
-export const tracking = { display: -0.02, heading: -0.015, amount: -0.03 } as const;
+/** Letter-spacing (em): headings tighten with size (−0.02 … −0.045). */
+export const tracking = { display: -0.045, heading: -0.03, amount: -0.045, title: -0.01 } as const;
 
 export const fontFamily = {
-  sans: '"DM Sans Variable", "DM Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif',
-  mono: 'ui-monospace, "SF Mono", Menlo, Consolas, monospace',
+  sans: '"Instrument Sans Variable", "Instrument Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif',
+  mono: 'ui-monospace, "SF Mono", "SFMono-Regular", Menlo, Consolas, monospace',
 } as const;
 
 /** 4/8 px grid. */
@@ -173,24 +271,40 @@ export const space = {
 export const size = {
   /** Touch controls (buttons). */
   control: 48,
-  /** Dense desktop controls where the Figma shows them. */
+  /** Dense desktop controls (dashboard actions, top bar). */
   controlDense: 40,
-  /** Text fields, selects, search. */
-  field: 56,
+  /** Text fields, selects. */
+  field: 52,
   gutterMobile: 24,
-  gutterWorkspace: 48,
-  sidebar: 224,
+  gutterWorkspace: 40,
+  sidebar: 248,
   topbar: 72,
 } as const;
 
 export const radius = {
-  /** Default control radius; the embedded checkout lets merchants pick 0–24. */
-  control: 8,
-  card: 12,
-  badge: 4,
+  /** Default control radius; the embedded checkout lets merchants pick 0–24 (cards and pills follow). */
+  control: 12,
+  /** Cards (control × 4/3, max 24). */
+  card: 16,
+  /** Big panels: hero, checkout order side (control × 2, max 28). */
+  panel: 24,
+  /** Small radius: chips inside controls, skeletons, code. */
+  badge: 6,
+  /** Pills: status badges, marketing buttons, segmented control. */
+  pill: 999,
 } as const;
 
 export const motion = { fast: 120, base: 200 } as const;
+
+/** Focus ring: 3 px violet, offset 2 px. */
+export const focusRing = { width: 3, offset: 2 } as const;
+
+/** Elevation: shadows only on floating elements. */
+export const shadow = {
+  overlay: "0 1px 2px rgb(18 38 63 / 0.06), 0 16px 40px -12px rgb(18 38 63 / 0.22)",
+  /** Floating card on navy (hero "Payment received" card). */
+  onNavy: "0 30px 60px -20px rgb(4 14 26 / 0.6)",
+} as const;
 
 /** Every token, for documentation tooling. */
 export const tokens = {
@@ -206,4 +320,6 @@ export const tokens = {
   size,
   radius,
   motion,
+  focusRing,
+  shadow,
 } as const;

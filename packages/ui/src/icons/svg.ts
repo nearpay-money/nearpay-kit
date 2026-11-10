@@ -40,7 +40,7 @@ export function shapeToSvg(shape: IconShape, o: IconSvgOptions = {}): string {
     : {
         fill: "none",
         stroke: "currentColor",
-        "stroke-width": 1.75,
+        "stroke-width": shape.strokeWidth ?? 1.75,
         "stroke-linecap": "round",
         "stroke-linejoin": "round",
       };

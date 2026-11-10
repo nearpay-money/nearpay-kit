@@ -13,6 +13,8 @@ export interface IconShape {
   readonly filled?: boolean;
   /** Default pixel size when none is given (20 unless set). */
   readonly size?: number;
+  /** Stroke width for stroke icons (1.75 unless set). */
+  readonly strokeWidth?: number;
 }
 
 const p = (d: string): IconNode => ["path", { d }];
@@ -33,6 +35,7 @@ export const WALLET: IconShape = {
 };
 export const SEARCH: IconShape = { nodes: [["circle", { cx: "11", cy: "11", r: "6.5" }], p("M20 20l-4.25-4.25")] };
 export const CHEVRON_DOWN: IconShape = { nodes: [p("M7 10l5 5 5-5")] };
+export const CHEVRON_UP_DOWN: IconShape = { nodes: [p("M7.5 9.5L12 5l4.5 4.5M7.5 14.5L12 19l4.5-4.5")] };
 export const CHEVRON_RIGHT: IconShape = { nodes: [p("M10 7l5 5-5 5")] };
 export const COPY: IconShape = {
   nodes: [
@@ -60,12 +63,12 @@ export const LOG_OUT: IconShape = {
 };
 export const MORE: IconShape = { nodes: [p("M6 12h.01M12 12h.01M18 12h.01")] };
 export const CARET_DOWN: IconShape = { nodes: [p("M7 9.5h10l-5 6z")], filled: true, size: 12 };
+/** The NearPay "Convergence" mark in one colour (currentColor), on the 24 px grid. */
 export const NEARPAY_MARK: IconShape = {
-  filled: true,
+  strokeWidth: 2.25,
   nodes: [
-    p(
-      "M3 4.5A1.5 1.5 0 014.5 3h2.2c.5 0 1 .26 1.27.7L15 15.2V4.5A1.5 1.5 0 0116.5 3h3A1.5 1.5 0 0121 4.5v15a1.5 1.5 0 01-1.5 1.5h-2.2c-.5 0-1-.26-1.27-.7L9 8.8v10.7A1.5 1.5 0 017.5 21h-3A1.5 1.5 0 013 19.5v-15z",
-    ),
+    p("M3 5.5c6.5 0 7.5 6.5 14 6.5M3 12h14M3 18.5c6.5 0 7.5-6.5 14-6.5"),
+    ["circle", { cx: "20.25", cy: "12", r: "2.25", fill: "currentColor", stroke: "none" }],
   ],
 };
 
@@ -80,6 +83,7 @@ export const ICON_SHAPES = {
   search: SEARCH,
   "chevron-down": CHEVRON_DOWN,
   "chevron-right": CHEVRON_RIGHT,
+  "chevron-up-down": CHEVRON_UP_DOWN,
   copy: COPY,
   "external-link": EXTERNAL_LINK,
   card: CARD,

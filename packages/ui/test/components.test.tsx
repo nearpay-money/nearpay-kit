@@ -895,12 +895,14 @@ describe("ThemeRoot and icons", () => {
     };
     const orig = window.matchMedia;
     window.matchMedia = (() => mq) as unknown as typeof window.matchMedia;
-    const { container, unmount } = render(<ThemeRoot theme="auto" accent="#65dfc0" />);
+    const { container, unmount } = render(<ThemeRoot theme="auto" accent="#4f46e5" />);
     const root = container.firstElementChild as HTMLElement;
     expect(root.getAttribute("data-theme")).toBe("auto");
-    expect(root.style.getPropertyValue("--np-color-on-accent")).toBe("#102c30");
+    // Dark (navy surface): the indigo is lightened until it reads as text on #12263f.
+    expect(root.style.getPropertyValue("--np-color-accent-text")).not.toBe("#4f46e5");
     act(() => listeners[0]?.({ matches: false }));
-    expect(root.style.getPropertyValue("--np-color-on-accent")).toBe("#132d31");
+    // Light (white surface): the indigo already passes, so it is used as is.
+    expect(root.style.getPropertyValue("--np-color-accent-text")).toBe("#4f46e5");
     unmount();
     expect(mq.removeEventListener).toHaveBeenCalled();
     window.matchMedia = orig;

@@ -54,7 +54,7 @@ export function ButtonsDemo() {
       <div className="np-row">
         <Button>Continue</Button>
         <Button variant="secondary">Continue</Button>
-        <Button variant="ghost">Continue</Button>
+        <Button variant="ghost">Continue (ghost = quiet)</Button>
         <Button variant="danger">Refund payment</Button>
         <Button variant="mint">Continue</Button>
       </div>
@@ -265,7 +265,7 @@ export function BadgesDemo() {
       <div className="np-row">
         <ModePill mode="live" />
         <ModePill mode="test" />
-        <StatusBadge tone="success">Business details reviewed by NearPay</StatusBadge>
+        <StatusBadge tone="info">Business details on file</StatusBadge>
       </div>
     </div>
   );
@@ -364,24 +364,27 @@ export function TableDemo() {
             ? [
                 {
                   id: "NP–10482",
-                  customer: "Wallet 0x71…9A42",
                   amount: "4900",
                   status: "Paid",
-                  received: "USDC · Base",
+                  description: "Acme Pro",
+                  paidWith: "USDC on Base",
+                  date: "Today, 14:09",
                 },
                 {
                   id: "NP–10478",
-                  customer: "Wallet 0x98…84D2",
                   amount: "8900",
                   status: "Failed",
-                  received: "No settlement",
+                  description: "Team plan",
+                  paidWith: "ETH on Arbitrum",
+                  date: "Today, 11:20",
                 },
                 {
                   id: "NP–10477",
-                  customer: "northstar.near",
                   amount: "12900",
-                  status: "Pending",
-                  received: "USDC · Base",
+                  status: "Confirming",
+                  description: "Annual plan",
+                  paidWith: "SOL on Solana",
+                  date: "Yesterday, 18:02",
                 },
               ]
             : []
@@ -474,7 +477,7 @@ export function ActivityDemo() {
           {
             id: "3",
             title: "Add your business details",
-            description: "Reviewed by NearPay before live payments.",
+            description: "Self-declared; you can edit them any time.",
             status: "upcoming",
             action: <Button variant="secondary">Start</Button>,
           },
@@ -615,8 +618,8 @@ export function CardsDemo() {
         <div className="np-stack">
           <CardTitle>Payment details</CardTitle>
           <p className="np-text-h4">Acme Studio</p>
-          <StatusBadge tone="success">Reviewed</StatusBadge>
-          <p>Business details reviewed by NearPay</p>
+          <StatusBadge tone="success">Verified</StatusBadge>
+          <p>Payout address verified for Acme Studio</p>
           <hr className="np-divider" />
           <KeyValueList
             layout="stacked"

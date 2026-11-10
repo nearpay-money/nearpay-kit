@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { cx } from "../cx.js";
 import { ArrowLeftIcon } from "../icons/index.js";
-import { NearPayLogo } from "./AppShell.js";
+import { NearPayLogo, NearPayMark } from "./Brand.js";
 import { Avatar } from "./Choice.js";
 import { Callout } from "./Display.js";
 
@@ -33,6 +33,8 @@ export interface CheckoutFrameProps {
   summary?: ReactNode;
   /** `page` (hosted, default) or `embed` (iframe: no brand bar, transparent canvas). */
   variant?: "page" | "embed";
+  /** Footer brand line, shown next to the NearPay mark. Default "Secured by NearPay". */
+  securedLabel?: ReactNode;
   /** Footer links; items without an href are omitted. */
   links?: { help?: string; privacy?: string; terms?: string };
   className?: string;
@@ -54,6 +56,8 @@ function BackButton({ onBack, label }: { onBack: () => void; label: string }) {
  * Checkout layout: back + "Secure checkout", merchant header with avatar initial, amount hero,
  * flow content, and the "Secured by NearPay · Help · Privacy · Terms" footer. Responsive to its
  * container (container queries), so the same markup works hosted, embedded and in previews.
+ * v2: with a `summary`, containers ≥ 880 px show the split layout — the order side on navy
+ * (merchant, amount, lines, `RouteDiagram`) and the pay side on white.
  */
 export function CheckoutFrame({
   merchant,
@@ -65,6 +69,7 @@ export function CheckoutFrame({
   banner,
   summary,
   variant = "page",
+  securedLabel = "Secured by NearPay",
   links = {},
   className,
   "data-testid": testId,
@@ -94,14 +99,17 @@ export function CheckoutFrame({
         <div className="np-checkout__inner">
           <div className="np-checkout__topbar">
             <span className="np-checkout__brand">
-              <NearPayLogo />
+              <NearPayLogo size="sm" />
             </span>
             {onBack ? <BackButton onBack={onBack} label={backLabel} /> : <span />}
             <span className="np-checkout__secure">{secureLabel}</span>
           </div>
           {bannerNode ? <div className="np-checkout__banner">{bannerNode}</div> : null}
           {hasHeader || summary ? (
-            <section className="np-checkout__summary" aria-label="Order summary">
+            <section
+              className={cx("np-checkout__summary", variant === "page" && "np-surface-navy")}
+              aria-label="Order summary"
+            >
               {onBack && merchant ? (
                 <span className="np-checkout__back-wide">
                   <BackButton onBack={onBack} label={`Back to ${merchant.name}`} />
@@ -123,7 +131,10 @@ export function CheckoutFrame({
           <section className="np-checkout__main">
             <div className="np-checkout__flow">{children}</div>
             <footer className="np-checkout__footer">
-              <p className="np-checkout__secured">Secured by NearPay</p>
+              <p className="np-checkout__secured">
+                <NearPayMark size={18} favicon={false} className="np-checkout__secured-mark" />
+                <span>{securedLabel}</span>
+              </p>
               {linkItems.length > 0 ? (
                 <ul className="np-checkout__links">
                   {linkItems.map(([label, href]) => (

@@ -6,7 +6,7 @@
     "useIgnoreFile": true
   },
   "files": {
-    "includes": ["**", "!packages/*/dist", "!**/coverage"]
+    "includes": ["**", "!packages/*/dist", "!**/coverage", "!packages/ui/brand", "!packages/ui/gallery/dist"]
   },
   "formatter": {
     "enabled": true,

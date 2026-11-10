@@ -1,12 +1,14 @@
 /*
- * @nearpay-internal/ui — design tokens.
+ * @nearpay-internal/ui — design tokens (v2, "Convergence").
  *
  * Themes: light (default), dark, auto (follows prefers-color-scheme).
  *   <div class="np-root" data-theme="light | dark | auto">
  * Every token is a custom property, so a merchant appearance (accent, radius) can be applied at
  * runtime with element.style.setProperty(...) on the theme root (allowed under the checkout CSP;
  * see applyAppearance()). Tokens are re-declared on .np-root / [data-theme] so derived tokens
- * (e.g. card radius) follow overrides made on that element.
+ * (card, panel and pill radius) follow overrides made on that element.
+ * Navy surfaces: put `np-surface-navy` on any element to re-map the semantic colours for content
+ * on navy (styles.css), in either theme.
  * Keep in sync with src/tokens.ts (enforced by test/tokens.test.ts).
  */
 
@@ -14,40 +16,61 @@
 .np-root,
 [data-theme] {
   /* Brand primitives */
-  --np-ink: #132d31;
-  --np-ink-deep: #102c30;
-  --np-teal: #087a68;
-  --np-teal-hover: #065e52;
-  --np-teal-pressed: #054c43;
-  --np-mint: #65dfc0;
-  --np-mint-hover: #85e8cf;
-  --np-mint-soft: #eaf5f1;
-  --np-canvas: #f7f9f8;
-  --np-border-fine: #dce5e3;
+  --np-ink: #12263f;
+  --np-ink-deep: #0f2136;
+  --np-teal: #007a68;
+  --np-teal-hover: #005c4f;
+  --np-teal-pressed: #004a40;
+  --np-teal-brand: #00a38c;
+  --np-mint: #8ef0d3;
+  --np-mint-hover: #b0f5e1;
+  --np-mint-soft: #e3f7f1;
+  --np-violet: #5b5bd6;
+  --np-violet-on-navy: #b4b4ff;
+  --np-canvas: #f3f6f9;
+  --np-subtle: #f5f8fb;
+  --np-border-fine: #e1e7ee;
+  --np-border-outline: #c9d3de;
   --np-white: #ffffff;
+  --np-navy: #12263f;
+  --np-navy-raised: #1a3150;
+  --np-navy-chip: #1d3653;
+  --np-navy-border: #2e4b6c;
+  --np-navy-active: #24405f;
+  --np-on-navy: #ffffff;
+  --np-on-navy-secondary: #c7d5e4;
+  --np-on-navy-muted: #a9bbcf;
+  --np-on-navy-chip: #e6eef6;
 
-  /* Typography */
+  /* Typography — Instrument Sans (OFL), self-hosted via fonts.css */
   --np-font-sans:
-    "DM Sans Variable", "DM Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  --np-font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
-  --np-text-display: 64px;
+    "Instrument Sans Variable", "Instrument Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
+    sans-serif;
+  --np-font-mono: ui-monospace, "SF Mono", "SFMono-Regular", Menlo, Consolas, monospace;
+  --np-text-display: 76px;
   --np-text-h1: 48px;
-  --np-text-h2: 32px;
+  --np-text-h2: 34px;
   --np-text-h3: 24px;
-  --np-text-h4: 20px;
+  --np-text-h4: 18px;
   --np-text-body: 16px;
   --np-text-small: 14px;
-  --np-text-caption: 12px;
-  --np-text-amount: 42px;
+  --np-text-caption: 13px;
+  --np-text-title: 30px;
+  --np-text-stat: 32px;
+  --np-text-amount: 48px;
+  --np-text-amount-hero: 80px;
   --np-weight-regular: 400;
   --np-weight-medium: 500;
   --np-weight-semibold: 600;
-  --np-leading-tight: 1.1;
-  --np-leading-heading: 1.25;
-  --np-leading-body: 1.5;
-  --np-tracking-display: -0.02em;
-  --np-tracking-heading: -0.015em;
-  --np-tracking-amount: -0.03em;
+  --np-weight-strong: 650;
+  --np-weight-bold: 700;
+  --np-leading-tight: 1.02;
+  --np-leading-heading: 1.2;
+  --np-leading-body: 1.55;
+  --np-tracking-display: -0.045em;
+  --np-tracking-heading: -0.03em;
+  --np-tracking-amount: -0.045em;
+  --np-tracking-title: -0.01em;
 
   /* Space (4/8 px grid) */
   --np-space-0-5: 2px;
@@ -65,138 +88,249 @@
   /* Sizes */
   --np-size-control: 48px;
   --np-size-control-dense: 40px;
-  --np-size-field: 56px;
+  --np-size-field: 52px;
   --np-size-gutter-mobile: 24px;
-  --np-size-gutter-workspace: 48px;
-  --np-size-sidebar: 224px;
+  --np-size-gutter-workspace: 40px;
+  --np-size-sidebar: 248px;
   --np-size-topbar: 72px;
 
-  /* Radius — merchants may set --np-radius-control to 0–24px */
-  --np-radius-control: 8px;
-  --np-radius-card: min(calc(var(--np-radius-control) * 1.5), 24px);
+  /* Radius — merchants may set --np-radius-control to 0–24px; cards, panels and pills follow */
+  --np-radius-control: 12px;
+  --np-radius-card: min(calc(var(--np-radius-control) * 4 / 3), 24px);
+  --np-radius-panel: min(calc(var(--np-radius-control) * 2), 28px);
   --np-radius-badge: min(calc(var(--np-radius-control) / 2), 8px);
+  --np-radius-pill: min(calc(var(--np-radius-control) * 100), 999px);
   --np-radius-full: 9999px;
+
+  /* Focus ring: 3px violet, offset 2px */
+  --np-focus-width: 3px;
+  --np-focus-offset: 2px;
 
   /* Motion */
   --np-duration-fast: 120ms;
   --np-duration-base: 200ms;
   --np-ease: cubic-bezier(0.2, 0, 0, 1);
 
-  /* Elevation & layers */
-  --np-shadow-overlay: 0 1px 2px rgb(19 45 49 / 0.06), 0 12px 32px rgb(19 45 49 / 0.16);
-  --np-shadow-focus: 0 0 0 2px var(--np-color-surface), 0 0 0 4px var(--np-color-focus);
+  /* Elevation & layers — shadows only on floating elements */
+  --np-shadow-overlay: 0 1px 2px rgb(18 38 63 / 0.06), 0 16px 40px -12px rgb(18 38 63 / 0.22);
+  --np-shadow-on-navy: 0 30px 60px -20px rgb(4 14 26 / 0.6);
+  --np-shadow-focus: 0 0 0 2px var(--np-color-surface), 0 0 0 5px var(--np-color-focus);
   --np-z-overlay: 1000;
   --np-z-toast: 1100;
   --np-z-popover: 900;
 
   /* Semantic colours — light */
   color-scheme: light;
-  --np-color-bg: #f7f9f8;
+  --np-mark-routes: #007a68;
+  --np-mark-dot: #5b5bd6;
+  --np-color-bg: #f3f6f9;
   --np-color-surface: #ffffff;
-  --np-color-surface-muted: #f7f9f8;
-  --np-color-text: #132d31;
-  --np-color-text-secondary: #52676b;
-  --np-color-border: #dce5e3;
-  --np-color-border-control: #7f928f;
-  --np-color-accent: #087a68;
-  --np-color-accent-hover: #065e52;
-  --np-color-accent-pressed: #054c43;
+  --np-color-surface-muted: #f7f9fb;
+  --np-color-text: #12263f;
+  --np-color-text-secondary: #4a5b70;
+  --np-color-text-tertiary: #5a6b80;
+  --np-color-border: #e1e7ee;
+  --np-color-border-subtle: #edf1f5;
+  --np-color-border-outline: #c9d3de;
+  --np-color-border-control: #7a8ca2;
+  --np-color-accent: #007a68;
+  --np-color-accent-hover: #005c4f;
+  --np-color-accent-pressed: #004a40;
   --np-color-on-accent: #ffffff;
-  --np-color-accent-text: #087a68;
-  --np-color-accent-subtle: #eaf5f1;
-  --np-color-accent-subtle-text: #087a68;
-  --np-color-focus: #087a68;
-  --np-color-success-bg: #eaf6ee;
-  --np-color-success-fg: #17744d;
-  --np-color-warning-bg: #fff5e4;
-  --np-color-warning-fg: #895710;
-  --np-color-danger-bg: #fceef0;
-  --np-color-danger-fg: #b44048;
-  --np-color-neutral-bg: #eef2f1;
-  --np-color-neutral-fg: #52676b;
-  --np-color-inverse-bg: #132d31;
+  --np-color-accent-text: #007a68;
+  --np-color-accent-subtle: #e3f7f1;
+  --np-color-accent-subtle-text: #00594c;
+  --np-color-focus: #5b5bd6;
+  --np-color-route: #5b5bd6;
+  --np-color-success-bg: #ddf7ef;
+  --np-color-success-fg: #00594c;
+  --np-color-info-bg: #ececfd;
+  --np-color-info-fg: #3b3ba8;
+  --np-color-warning-bg: #fff1d6;
+  --np-color-warning-fg: #7a4b00;
+  --np-color-warning-subtle: #fff7e6;
+  --np-color-warning-strong: #5c3900;
+  --np-color-danger-bg: #fdecea;
+  --np-color-danger-fg: #b42318;
+  --np-color-neutral-bg: #edf1f5;
+  --np-color-neutral-fg: #4a5b70;
+  --np-color-inverse-bg: #12263f;
   --np-color-inverse-text: #ffffff;
-  --np-color-skeleton: #e9efed;
-  --np-color-overlay: rgb(19 45 49 / 0.48);
-  /* Chart series, in fixed order (validated categorical palette; never cycled). */
-  --np-chart-1: #00826b;
+  --np-color-skeleton: #e7ecf2;
+  --np-color-navy: #12263f;
+  --np-color-navy-raised: #1a3150;
+  --np-color-navy-border: #2e4b6c;
+  --np-color-navy-active: #24405f;
+  --np-color-on-navy: #ffffff;
+  --np-color-on-navy-secondary: #c7d5e4;
+  --np-color-on-navy-muted: #a9bbcf;
+  --np-color-on-navy-accent: #8ef0d3;
+  --np-color-on-navy-route: #b4b4ff;
+  --np-chart-1: #007a68;
   --np-chart-2: #5b5bd6;
-  --np-chart-3: #b0417e;
-  --np-chart-4: #8a6a00;
+  --np-chart-3: #74879e;
+  --np-chart-4: #a35f00;
+  --np-color-overlay: rgb(18 38 63 / 0.48);
 }
 
 [data-theme="dark"] {
   color-scheme: dark;
-  --np-color-bg: #102c30;
-  --np-color-surface: #193a3f;
-  --np-color-surface-muted: #143236;
+  --np-mark-routes: #8ef0d3;
+  --np-mark-dot: #b4b4ff;
+  --np-color-bg: #0b1a2c;
+  --np-color-surface: #12263f;
+  --np-color-surface-muted: #0f2136;
   --np-color-text: #ffffff;
-  --np-color-text-secondary: #a9c0be;
-  --np-color-border: #2d4c50;
-  --np-color-border-control: #6e8c8a;
-  --np-color-accent: #65dfc0;
-  --np-color-accent-hover: #85e8cf;
-  --np-color-accent-pressed: #4fd3b2;
-  --np-color-on-accent: #102c30;
-  --np-color-accent-text: #65dfc0;
-  --np-color-accent-subtle: #1e4c45;
-  --np-color-accent-subtle-text: #65dfc0;
-  --np-color-focus: #65dfc0;
-  --np-color-success-bg: #173f37;
-  --np-color-success-fg: #7fe0b5;
-  --np-color-warning-bg: #3d3320;
-  --np-color-warning-fg: #f2c879;
-  --np-color-danger-bg: #45262b;
-  --np-color-danger-fg: #ff9aa2;
-  --np-color-neutral-bg: #24434a;
-  --np-color-neutral-fg: #b3cac8;
+  --np-color-text-secondary: #c7d5e4;
+  --np-color-text-tertiary: #a9bbcf;
+  --np-color-border: #2e4b6c;
+  --np-color-border-subtle: #223a57;
+  --np-color-border-outline: #3d5b7e;
+  --np-color-border-control: #7189a6;
+  --np-color-accent: #8ef0d3;
+  --np-color-accent-hover: #b0f5e1;
+  --np-color-accent-pressed: #6fe3c1;
+  --np-color-on-accent: #12263f;
+  --np-color-accent-text: #8ef0d3;
+  --np-color-accent-subtle: #17384a;
+  --np-color-accent-subtle-text: #8ef0d3;
+  --np-color-focus: #b4b4ff;
+  --np-color-route: #b4b4ff;
+  --np-color-success-bg: #133b3d;
+  --np-color-success-fg: #8ef0d3;
+  --np-color-info-bg: #272c5e;
+  --np-color-info-fg: #c4c4ff;
+  --np-color-warning-bg: #3a2f1c;
+  --np-color-warning-fg: #ffd58a;
+  --np-color-warning-subtle: #2e2716;
+  --np-color-warning-strong: #ffe3b0;
+  --np-color-danger-bg: #45222a;
+  --np-color-danger-fg: #ffadad;
+  --np-color-neutral-bg: #24405f;
+  --np-color-neutral-fg: #c7d5e4;
   --np-color-inverse-bg: #ffffff;
-  --np-color-inverse-text: #132d31;
-  --np-color-skeleton: #24434a;
-  --np-color-overlay: rgb(6 20 22 / 0.64);
-  --np-chart-1: #24a487;
-  --np-chart-2: #7a7cec;
-  --np-chart-3: #d65a98;
-  --np-chart-4: #ad8220;
-  --np-shadow-overlay: 0 1px 2px rgb(0 0 0 / 0.2), 0 12px 32px rgb(0 0 0 / 0.4);
+  --np-color-inverse-text: #12263f;
+  --np-color-skeleton: #24405f;
+  --np-color-navy: #0f2136;
+  --np-color-navy-raised: #1a3150;
+  --np-color-navy-border: #2e4b6c;
+  --np-color-navy-active: #24405f;
+  --np-color-on-navy: #ffffff;
+  --np-color-on-navy-secondary: #c7d5e4;
+  --np-color-on-navy-muted: #a9bbcf;
+  --np-color-on-navy-accent: #8ef0d3;
+  --np-color-on-navy-route: #b4b4ff;
+  --np-chart-1: #8ef0d3;
+  --np-chart-2: #b4b4ff;
+  --np-chart-3: #9fb3c8;
+  --np-chart-4: #ffb86b;
+  --np-color-overlay: rgb(4 12 22 / 0.7);
+  --np-shadow-overlay: 0 1px 2px rgb(0 0 0 / 0.24), 0 16px 40px -12px rgb(0 0 0 / 0.6);
 }
 
 @media (prefers-color-scheme: dark) {
   [data-theme="auto"] {
     color-scheme: dark;
-    --np-color-bg: #102c30;
-    --np-color-surface: #193a3f;
-    --np-color-surface-muted: #143236;
+    --np-mark-routes: #8ef0d3;
+    --np-mark-dot: #b4b4ff;
+    --np-color-bg: #0b1a2c;
+    --np-color-surface: #12263f;
+    --np-color-surface-muted: #0f2136;
     --np-color-text: #ffffff;
-    --np-color-text-secondary: #a9c0be;
-    --np-color-border: #2d4c50;
-    --np-color-border-control: #6e8c8a;
-    --np-color-accent: #65dfc0;
-    --np-color-accent-hover: #85e8cf;
-    --np-color-accent-pressed: #4fd3b2;
-    --np-color-on-accent: #102c30;
-    --np-color-accent-text: #65dfc0;
-    --np-color-accent-subtle: #1e4c45;
-    --np-color-accent-subtle-text: #65dfc0;
-    --np-color-focus: #65dfc0;
-    --np-color-success-bg: #173f37;
-    --np-color-success-fg: #7fe0b5;
-    --np-color-warning-bg: #3d3320;
-    --np-color-warning-fg: #f2c879;
-    --np-color-danger-bg: #45262b;
-    --np-color-danger-fg: #ff9aa2;
-    --np-color-neutral-bg: #24434a;
-    --np-color-neutral-fg: #b3cac8;
+    --np-color-text-secondary: #c7d5e4;
+    --np-color-text-tertiary: #a9bbcf;
+    --np-color-border: #2e4b6c;
+    --np-color-border-subtle: #223a57;
+    --np-color-border-outline: #3d5b7e;
+    --np-color-border-control: #7189a6;
+    --np-color-accent: #8ef0d3;
+    --np-color-accent-hover: #b0f5e1;
+    --np-color-accent-pressed: #6fe3c1;
+    --np-color-on-accent: #12263f;
+    --np-color-accent-text: #8ef0d3;
+    --np-color-accent-subtle: #17384a;
+    --np-color-accent-subtle-text: #8ef0d3;
+    --np-color-focus: #b4b4ff;
+    --np-color-route: #b4b4ff;
+    --np-color-success-bg: #133b3d;
+    --np-color-success-fg: #8ef0d3;
+    --np-color-info-bg: #272c5e;
+    --np-color-info-fg: #c4c4ff;
+    --np-color-warning-bg: #3a2f1c;
+    --np-color-warning-fg: #ffd58a;
+    --np-color-warning-subtle: #2e2716;
+    --np-color-warning-strong: #ffe3b0;
+    --np-color-danger-bg: #45222a;
+    --np-color-danger-fg: #ffadad;
+    --np-color-neutral-bg: #24405f;
+    --np-color-neutral-fg: #c7d5e4;
     --np-color-inverse-bg: #ffffff;
-    --np-color-inverse-text: #132d31;
-    --np-color-skeleton: #24434a;
-    --np-color-overlay: rgb(6 20 22 / 0.64);
-    --np-chart-1: #24a487;
-    --np-chart-2: #7a7cec;
-    --np-chart-3: #d65a98;
-    --np-chart-4: #ad8220;
-    --np-shadow-overlay: 0 1px 2px rgb(0 0 0 / 0.2), 0 12px 32px rgb(0 0 0 / 0.4);
+    --np-color-inverse-text: #12263f;
+    --np-color-skeleton: #24405f;
+    --np-color-navy: #0f2136;
+    --np-color-navy-raised: #1a3150;
+    --np-color-navy-border: #2e4b6c;
+    --np-color-navy-active: #24405f;
+    --np-color-on-navy: #ffffff;
+    --np-color-on-navy-secondary: #c7d5e4;
+    --np-color-on-navy-muted: #a9bbcf;
+    --np-color-on-navy-accent: #8ef0d3;
+    --np-color-on-navy-route: #b4b4ff;
+    --np-chart-1: #8ef0d3;
+    --np-chart-2: #b4b4ff;
+    --np-chart-3: #9fb3c8;
+    --np-chart-4: #ffb86b;
+    --np-color-overlay: rgb(4 12 22 / 0.7);
+    --np-shadow-overlay: 0 1px 2px rgb(0 0 0 / 0.24), 0 16px 40px -12px rgb(0 0 0 / 0.6);
   }
+}
+
+/*
+ * Navy surface scope — sidebar, checkout order side, hero panels, dark bands, `Card variant="navy"`.
+ * Re-maps the semantic colours so any kit component inside reads correctly on navy, in either
+ * theme. Fixed brand colours: a merchant accent never reaches a navy surface. Values are checked
+ * for contrast by test/tokens.test.ts.
+ */
+.np-surface-navy {
+  --np-color-bg: var(--np-color-navy);
+  --np-color-surface: #1a3150;
+  --np-color-surface-muted: #1d3653;
+  --np-color-text: #ffffff;
+  --np-color-text-secondary: #c7d5e4;
+  --np-color-text-tertiary: #a9bbcf;
+  --np-color-border: #2e4b6c;
+  --np-color-border-subtle: #2e4b6c;
+  --np-color-border-outline: #3d5b7e;
+  --np-color-border-control: #7189a6;
+  --np-color-accent: #8ef0d3;
+  --np-color-accent-hover: #b0f5e1;
+  --np-color-accent-pressed: #6fe3c1;
+  --np-color-on-accent: #12263f;
+  --np-color-accent-text: #8ef0d3;
+  --np-color-accent-subtle: #24405f;
+  --np-color-accent-subtle-text: #8ef0d3;
+  --np-color-focus: #b4b4ff;
+  --np-color-route: #b4b4ff;
+  --np-color-success-bg: #133b3d;
+  --np-color-success-fg: #8ef0d3;
+  --np-color-info-bg: #272c5e;
+  --np-color-info-fg: #c4c4ff;
+  --np-color-warning-bg: #3a2f1c;
+  --np-color-warning-fg: #ffd58a;
+  --np-color-warning-subtle: #2e2716;
+  --np-color-warning-strong: #ffe3b0;
+  --np-color-danger-bg: #45222a;
+  --np-color-danger-fg: #ffadad;
+  --np-color-neutral-bg: #24405f;
+  --np-color-neutral-fg: #c7d5e4;
+  --np-color-inverse-bg: #ffffff;
+  --np-color-inverse-text: #12263f;
+  --np-color-skeleton: #24405f;
+  --np-mark-routes: #8ef0d3;
+  --np-mark-dot: #b4b4ff;
+  color-scheme: dark;
+  background-color: var(--np-color-navy);
+  color: var(--np-color-text);
 }
 
 @media (prefers-reduced-motion: reduce) {
