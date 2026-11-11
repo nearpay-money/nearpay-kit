@@ -4,15 +4,6 @@
  * the fields a test cares about.
  */
 
-import {
-  Account,
-  AgentPayment,
-  API_VERSION,
-  BalanceTransaction,
-  CheckoutSession,
-  PaymentIntent,
-  SettlementDestination,
-} from "@nearpay/spec";
 import { newId, uuidv7 } from "@nearpay-internal/ids";
 import {
   EventEnvelope,
@@ -21,6 +12,15 @@ import {
   InternalSettlementDestination,
   type Subject,
 } from "@nearpay-internal/spec";
+import {
+  Account,
+  AgentPayment,
+  API_VERSION,
+  BalanceTransaction,
+  CheckoutSession,
+  PaymentIntent,
+  SettlementDestination,
+} from "@nearpay-money/spec";
 
 type DeepPartial<T> = {
   [K in keyof T]?: T[K] extends object ? (T[K] extends unknown[] ? T[K] : DeepPartial<T[K]>) : T[K];

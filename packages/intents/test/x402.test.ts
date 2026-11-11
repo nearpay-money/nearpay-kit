@@ -4,7 +4,7 @@
  */
 import { readFileSync } from "node:fs";
 import { createRequire } from "node:module";
-import { NearIntentsQuote, parseOperationToken, quotedRequirements } from "@nearpay/spec";
+import { NearIntentsQuote, parseOperationToken, quotedRequirements } from "@nearpay-money/spec";
 import { describe, expect, it } from "vitest";
 import {
   jcs,
@@ -16,7 +16,7 @@ import {
 } from "../src/index.js";
 
 const require = createRequire(import.meta.url);
-const V = JSON.parse(readFileSync(require.resolve("@nearpay/spec/test-vectors/x402-near-intents.json"), "utf8"));
+const V = JSON.parse(readFileSync(require.resolve("@nearpay-money/spec/test-vectors/x402-near-intents.json"), "utf8"));
 
 const BINDING_INPUT: NearIntentsBindingInput = V.binding.input;
 const BINDING: string = V.binding.binding;

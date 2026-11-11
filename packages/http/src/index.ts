@@ -14,7 +14,7 @@ import {
   ErrorEnvelope as ErrorEnvelopeSchema,
   HEADERS,
   type RouteResponse,
-} from "@nearpay/spec";
+} from "@nearpay-money/spec";
 
 // ---------------------------------------------------------------------------------------------
 // Request context

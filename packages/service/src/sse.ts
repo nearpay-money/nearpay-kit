@@ -4,7 +4,7 @@
  * schemas, comment heartbeats, and closing on client disconnect or service shutdown.
  */
 import type { ServerResponse } from "node:http";
-import type { SseStream as SseDefinition } from "@nearpay/spec";
+import type { SseStream as SseDefinition } from "@nearpay-money/spec";
 
 export interface SseStream<E extends string = string> {
   /** Sends one event; the payload must match the route's schema for `event`. Returns false once closed. */

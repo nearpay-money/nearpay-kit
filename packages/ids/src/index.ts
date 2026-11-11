@@ -3,7 +3,7 @@
  * encoding (lower-case Crockford base32 of the 128-bit value left-padded to 130 bits).
  * Databases store the UUID; APIs render and accept the prefixed form.
  */
-import { ID_ALPHABET, ID_PREFIXES, type IdPrefix, idPattern } from "@nearpay/spec";
+import { ID_ALPHABET, ID_PREFIXES, type IdPrefix, idPattern } from "@nearpay-money/spec";
 
 export type { IdPrefix };
 export type PrefixedId<P extends IdPrefix = IdPrefix> = `${P}_${string}`;

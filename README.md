@@ -43,13 +43,13 @@ nearpay-kit/
 └── .github/workflows/ci.yml
 ```
 
-Each package has its own README with its public surface. Contracts (`@nearpay/spec`, `@nearpay-internal/spec`) come from the local registry; packages never import another repo's source.
+Each package has its own README with its public surface. Contracts (`@nearpay-money/spec`, `@nearpay-internal/spec`) come from the local registry; packages never import another repo's source.
 
 ## Commands
 
 | Command                 | What it does                                                                                                        |
 | ----------------------- | ------------------------------------------------------------------------------------------------------------------- |
-| `pnpm install`          | Install (Node 22, pnpm 9); `@nearpay/*` and `@nearpay-internal/*` resolve from the local registry (`.npmrc`)        |
+| `pnpm install`          | Install (Node 22, pnpm 9); `@nearpay-money/*` and `@nearpay-internal/*` resolve from the local registry (`.npmrc`)  |
 | `pnpm test`             | Unit tests                                                                                                          |
 | `pnpm test:integration` | Integration tests on real Postgres, NATS and Valkey (Testcontainers; needs Docker)                                  |
 | `pnpm verify`           | typecheck + lint + all tests + build                                                                                |

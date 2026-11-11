@@ -1,6 +1,6 @@
 import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
-import { getPaymentIntent } from "@nearpay/spec";
+import { getPaymentIntent } from "@nearpay-money/spec";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { BreakerOpenError, circuitBreaker, HttpError, httpClient, runWithContext, TimeoutError } from "../src/index.js";
 

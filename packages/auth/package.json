@@ -1,6 +1,6 @@
 {
   "name": "@nearpay-internal/auth",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "description": "Internal auth: Ed25519 JWT sign/verify, JWKS cache, scope and principal checks, service-token client.",
   "license": "Apache-2.0",
   "type": "module",
@@ -24,7 +24,7 @@
     "build": "node ../../scripts/build-package.mjs"
   },
   "dependencies": {
-    "@nearpay/spec": "0.4.1",
+    "@nearpay-money/spec": "0.5.0",
     "jose": "6.2.15"
   },
   "peerDependencies": {
@@ -32,6 +32,6 @@
   },
   "devDependencies": {
     "zod": "4.6.7",
-    "@nearpay-internal/spec": "0.4.1"
+    "@nearpay-internal/spec": "0.5.0"
   }
 }

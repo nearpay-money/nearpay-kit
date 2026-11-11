@@ -1,6 +1,6 @@
 {
   "name": "@nearpay-internal/http",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "description": "Outbound HTTP client: budgets, timeouts, idempotent retries with jitter, circuit breaker, trace propagation, typed route calls.",
   "license": "Apache-2.0",
   "type": "module",
@@ -24,7 +24,7 @@
     "build": "node ../../scripts/build-package.mjs"
   },
   "dependencies": {
-    "@nearpay/spec": "0.4.1"
+    "@nearpay-money/spec": "0.5.0"
   },
   "peerDependencies": {
     "zod": "^4.6.7"

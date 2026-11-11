@@ -1,6 +1,18 @@
 /**
  * Ops (console) principals — spec 0.2.0 `visibility: "ops"`, `opsRoles`, `ops_role` (foundations §9).
  */
+
+import {
+  approveOpsKillSwitchRelease,
+  decideKyb,
+  decideOpsKybCase,
+  INTERNAL_ROUTES,
+  listEvidence,
+  listOpsCases,
+  OPS_ROUTES,
+  opsPasskeyAuthenticationOptions,
+  removeOpsBlocklistEntry,
+} from "@nearpay-internal/spec";
 import {
   type AnyRoute,
   KEY_SCOPES,
@@ -13,18 +25,7 @@ import {
   PUBLIC_ROUTES,
   type RouteAuth,
   SERVICE_SCOPES,
-} from "@nearpay/spec";
-import {
-  approveOpsKillSwitchRelease,
-  decideKyb,
-  decideOpsKybCase,
-  INTERNAL_ROUTES,
-  listEvidence,
-  listOpsCases,
-  OPS_ROUTES,
-  opsPasskeyAuthenticationOptions,
-  removeOpsBlocklistEntry,
-} from "@nearpay-internal/spec";
+} from "@nearpay-money/spec";
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 import { AuthError, type AuthorizableRoute, authorizeRoute, type InternalClaims } from "../src/index.js";
