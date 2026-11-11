@@ -1,8 +1,8 @@
 /** Internal JWTs for tests (a fresh Ed25519 key per process; never used outside tests). */
 import { generateKeyPairSync } from "node:crypto";
-import { HEADERS, OPS_ROLE_SCOPES, type OpsRole } from "@nearpay/spec";
 import { type ClaimsInput, loadSigningKey, type SigningKey, signInternalJwt, staticKeys } from "@nearpay-internal/auth";
 import { newId } from "@nearpay-internal/ids";
+import { HEADERS, OPS_ROLE_SCOPES, type OpsRole } from "@nearpay-money/spec";
 
 let key: SigningKey | null = null;
 

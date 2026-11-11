@@ -18,7 +18,7 @@ import {
   OPS_ROLES,
   type OpsRole,
   TOKEN_TTL_SECONDS,
-} from "@nearpay/spec";
+} from "@nearpay-money/spec";
 import { decodeProtectedHeader, exportJWK, importJWK, type JWK, jwtVerify, SignJWT } from "jose";
 
 export type { Claims as InternalClaims };

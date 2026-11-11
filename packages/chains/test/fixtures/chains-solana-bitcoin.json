@@ -1,5 +1,5 @@
 {
-  "_source": "@nearpay/spec 0.4.0 test-vectors/chains-solana-bitcoin.json (subset: omft.spl_mints, assets, addresses.bitcoin). Replace with the spec file once the kit depends on spec 0.4.0.",
+  "_source": "@nearpay-money/spec 0.4.0 test-vectors/chains-solana-bitcoin.json (subset: omft.spl_mints, assets, addresses.bitcoin). Replace with the spec file once the kit depends on spec 0.4.0.",
   "spl_mints": [
     {
       "mint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",

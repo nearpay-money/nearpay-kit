@@ -7,7 +7,7 @@
 
 import { PublicKey } from "@near-js/crypto";
 import { actionCreators, createTransaction, Signature, SignedTransaction } from "@near-js/transactions";
-import type { MultiPayload } from "@nearpay/spec";
+import type { MultiPayload } from "@nearpay-money/spec";
 import { ed25519 } from "@noble/curves/ed25519.js";
 import { sha256 } from "@noble/hashes/sha2.js";
 import bs58 from "bs58";

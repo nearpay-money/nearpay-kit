@@ -10,7 +10,7 @@
  * schemas' output types; results are cross-checked against the spec's `parseOperationToken` and
  * `quotedRequirements` in the tests.
  */
-import type { X402NearIntentsBindingInput, X402OperationTokenInput, z } from "@nearpay/spec";
+import type { X402NearIntentsBindingInput, X402OperationTokenInput, z } from "@nearpay-money/spec";
 import { hmac } from "@noble/hashes/hmac.js";
 import { sha256 } from "@noble/hashes/sha2.js";
 import bs58 from "bs58";

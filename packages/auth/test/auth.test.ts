@@ -1,6 +1,6 @@
 import { generateKeyPairSync } from "node:crypto";
-import { advancePaymentAttempt, createApiKey, createCheckoutSession, listApiKeys } from "@nearpay/spec";
 import { createExecution, decideKyb } from "@nearpay-internal/spec";
+import { advancePaymentAttempt, createApiKey, createCheckoutSession, listApiKeys } from "@nearpay-money/spec";
 import { SignJWT } from "jose";
 import { describe, expect, it, vi } from "vitest";
 import {

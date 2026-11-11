@@ -1,7 +1,7 @@
-import { ErrorEnvelope } from "@nearpay/spec";
 import { AuthError } from "@nearpay-internal/auth";
 import { IdempotencyConflict } from "@nearpay-internal/db";
 import { HttpError } from "@nearpay-internal/http";
+import { ErrorEnvelope } from "@nearpay-money/spec";
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
 import { ApiError, fromZodError, paramName, parseQuery, toErrorResponse } from "../src/index.js";

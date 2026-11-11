@@ -1,5 +1,10 @@
 /** Building Verifier messages (lld/00-foundations.md §14). */
-import { INTENTS_CONTRACT, type IntentMessage, type IntentsRequirement, type TransferIntent } from "@nearpay/spec";
+import {
+  INTENTS_CONTRACT,
+  type IntentMessage,
+  type IntentsRequirement,
+  type TransferIntent,
+} from "@nearpay-money/spec";
 import { fromHex, toBase64 } from "./encoding.js";
 
 export type TransferIntents = [TransferIntent, TransferIntent];

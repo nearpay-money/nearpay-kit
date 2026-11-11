@@ -1,5 +1,11 @@
 import { Writable } from "node:stream";
 import { setTimeout as sleep } from "node:timers/promises";
+import type { ClaimsInput } from "@nearpay-internal/auth";
+import { IdempotencyConflict } from "@nearpay-internal/db";
+import { currentContext } from "@nearpay-internal/http";
+import { newId } from "@nearpay-internal/ids";
+import { getInternalPaymentIntent, getOpsReconciliationRun, resolveOpsReconciliationRun } from "@nearpay-internal/spec";
+import { checkoutSession, mintTestToken, opsHeaders, paymentIntent, testKeySource } from "@nearpay-internal/testing";
 import {
   advancePaymentAttempt,
   cancelPaymentIntent,
@@ -12,13 +18,7 @@ import {
   listPaymentIntents,
   PUBLIC_ROUTES,
   streamCheckoutSession,
-} from "@nearpay/spec";
-import type { ClaimsInput } from "@nearpay-internal/auth";
-import { IdempotencyConflict } from "@nearpay-internal/db";
-import { currentContext } from "@nearpay-internal/http";
-import { newId } from "@nearpay-internal/ids";
-import { getInternalPaymentIntent, getOpsReconciliationRun, resolveOpsReconciliationRun } from "@nearpay-internal/spec";
-import { checkoutSession, mintTestToken, opsHeaders, paymentIntent, testKeySource } from "@nearpay-internal/testing";
+} from "@nearpay-money/spec";
 import { InMemorySpanExporter } from "@opentelemetry/sdk-trace";
 import { afterEach, describe, expect, it } from "vitest";
 import {

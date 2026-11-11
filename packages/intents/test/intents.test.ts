@@ -27,7 +27,7 @@ import {
 } from "../src/index.js";
 
 const require = createRequire(import.meta.url);
-const V = JSON.parse(readFileSync(require.resolve("@nearpay/spec/test-vectors/intents-payloads.json"), "utf8"));
+const V = JSON.parse(readFileSync(require.resolve("@nearpay-money/spec/test-vectors/intents-payloads.json"), "utf8"));
 
 describe("signers reproduce the spec vectors exactly", () => {
   it("NEP-413", () => {

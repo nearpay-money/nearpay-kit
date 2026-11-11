@@ -11,16 +11,7 @@
  * Routes without a handler answer `500 api_error` ("not mocked") and are recorded, so a test notices
  * an unexpected call.
  */
-import {
-  type AnyRoute,
-  type ErrorCode,
-  type RouteBody,
-  type RouteParams,
-  type RouteQuery,
-  type RouteResponse,
-  SERVICE_CLIENT_SCOPES,
-  type ServiceName,
-} from "@nearpay/spec";
+
 import type { InternalClaims, KeySource } from "@nearpay-internal/auth";
 import {
   ApiError,
@@ -31,6 +22,16 @@ import {
   type RequestContext,
   type Service,
 } from "@nearpay-internal/service";
+import {
+  type AnyRoute,
+  type ErrorCode,
+  type RouteBody,
+  type RouteParams,
+  type RouteQuery,
+  type RouteResponse,
+  SERVICE_CLIENT_SCOPES,
+  type ServiceName,
+} from "@nearpay-money/spec";
 import { testConfig } from "./env.js";
 import { mintTestToken, testKeySource } from "./tokens.js";
 

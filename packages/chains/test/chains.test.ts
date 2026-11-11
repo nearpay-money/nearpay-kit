@@ -18,7 +18,7 @@ import {
 
 const require = createRequire(import.meta.url);
 const fpVectors = JSON.parse(
-  readFileSync(require.resolve("@nearpay/spec/test-vectors/destination-fingerprint.json"), "utf8"),
+  readFileSync(require.resolve("@nearpay-money/spec/test-vectors/destination-fingerprint.json"), "utf8"),
 );
 const BASE = "eip155:8453";
 const BTC = "bip122:000000000019d6689c085ae165831e93";

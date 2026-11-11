@@ -15,7 +15,7 @@ import {
 } from "../src/index.js";
 
 const require = createRequire(import.meta.url);
-const vectors = JSON.parse(readFileSync(require.resolve("@nearpay/spec/test-vectors/ids.json"), "utf8"));
+const vectors = JSON.parse(readFileSync(require.resolve("@nearpay-money/spec/test-vectors/ids.json"), "utf8"));
 
 describe("TypeID encoding (spec vectors)", () => {
   it("matches the upstream TypeID vectors", () => {

@@ -1,4 +1,3 @@
-import { ErrorEnvelope, OPS_ROLE_SCOPES, SERVICE_CLIENT_SCOPES } from "@nearpay/spec";
 import { verifyInternalJwt } from "@nearpay-internal/auth";
 import { HttpError, httpClient } from "@nearpay-internal/http";
 import { newId } from "@nearpay-internal/ids";
@@ -10,6 +9,7 @@ import {
   OPS_ROUTES,
   removeOpsBlocklistEntry,
 } from "@nearpay-internal/spec";
+import { ErrorEnvelope, OPS_ROLE_SCOPES, SERVICE_CLIENT_SCOPES } from "@nearpay-money/spec";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
   type MockPeer,

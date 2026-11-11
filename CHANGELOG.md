@@ -3,6 +3,15 @@
 All packages in this repository share one version. Breaking changes bump the major version and
 carry a migration note here (semver, foundations §4).
 
+## 0.5.0 — 2026-11-11 (public spec renamed to `@nearpay-money/spec`)
+
+`auth`, `bus`, `db`, `http`, `ids`, `intents`, `service` and `testing` 0.5.0: depend on **`@nearpay-money/spec`
+0.5.0** and `@nearpay-internal/spec` 0.5.0 (ADR-0025: the public packages moved from `@nearpay/*` to
+`@nearpay-money/*`; the `@nearpay` npm scope belongs to an unrelated company). No code change beyond the import
+specifier; contracts are identical to spec 0.4.2. `chains` and `money` (no spec dependency) stay at 0.4.0, `ui` at 0.5.0;
+none of them is republished. Consumers still on kit ≤ 0.4.0 keep working with the pnpm override
+`"@nearpay/spec": "npm:@nearpay-money/spec@0.5.0"` (those tarballs import the old name).
+
 ## ui 0.5.0 — 2026-11-11 (design v2, "Convergence")
 
 `@nearpay-internal/ui` only; the other packages stay at 0.4.0 (unchanged, not republished). Visual redesign to the
@@ -88,7 +97,7 @@ on 0.x: token names, class names and component APIs are kept where possible; the
 - `bitcoinAddressType(address, caip2 = BITCOIN_MAINNET)`: `p2wpkh` | `p2tr` | `other` (P2PKH, P2SH, P2WSH,
   other witness versions) | null (invalid); uses the package's own bech32/bech32m decoder (no new dependency).
 - `BITCOIN_MAINNET` constant. Tests check both against the spec 0.4.0 chain vectors (fixture copy in
-  `packages/chains/test/fixtures/`; switch to `@nearpay/spec/test-vectors/chains-solana-bitcoin.json` after the
+  `packages/chains/test/fixtures/`; switch to `@nearpay-money/spec/test-vectors/chains-solana-bitcoin.json` after the
   spec bump). Spec dependency stays 0.3.0 (unchanged).
 
 ## 0.3.1 — 2026-11-08
@@ -124,7 +133,7 @@ spec 0.4.1.
 
 ### spec 0.4.1
 
-- Every package depends on `@nearpay/spec` / `@nearpay-internal/spec` **0.3.0**.
+- Every package depends on `@nearpay-money/spec` / `@nearpay-internal/spec` **0.3.0**.
 
 ### service — SSE limits, resume cursor, `ctx.sse`
 
@@ -159,7 +168,7 @@ the misconfiguration being closed).
 
 ### spec 0.2.1
 
-- Every package depends on `@nearpay/spec` / `@nearpay-internal/spec` **0.2.1** (additive builders'
+- Every package depends on `@nearpay-money/spec` / `@nearpay-internal/spec` **0.2.1** (additive builders'
   change requests). No kit code change was needed.
 
 ### service / testing — `NP_ENV` is required (audit finding 2 follow-up)
@@ -229,7 +238,7 @@ see the migration note).
 
 ### spec 0.2.0
 
-- Every package depends on `@nearpay/spec` / `@nearpay-internal/spec` **0.2.0** (Stage 2 contract
+- Every package depends on `@nearpay-money/spec` / `@nearpay-internal/spec` **0.2.0** (Stage 2 contract
   freeze). No kit code reads the 1Click `OneClick*` fields that became nullish.
 - `@nearpay-internal/service`: `ops` routes (`visibility: "ops"`, `/ops/…`) get the 10 s request
   budget of gateway-routed routes (internal routes keep 5 s).
@@ -303,7 +312,7 @@ Additive (no migration needed):
   real service bootstrap (request validation, token verification and route authorization, response
   validation), records calls and answers `500 not mocked` for routes without a handler;
   `mockError`, `mintServiceToken(service)` and `testServiceToken(service)` (catalogue scopes).
-- Every package depends on `@nearpay/spec` / `@nearpay-internal/spec` 0.1.1.
+- Every package depends on `@nearpay-money/spec` / `@nearpay-internal/spec` 0.1.1.
 
 ## 0.1.0 — Stage 1, step 1.1
 

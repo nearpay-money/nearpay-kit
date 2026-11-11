@@ -1,6 +1,5 @@
 /** End to end: a service with automatic idempotency on real Postgres (kit tables + idempotencyStore). */
 import { randomBytes } from "node:crypto";
-import { createCheckoutSession, ErrorEnvelope } from "@nearpay/spec";
 import type { ClaimsInput } from "@nearpay-internal/auth";
 import {
   createDb,
@@ -15,6 +14,7 @@ import {
 } from "@nearpay-internal/db";
 import { newId, toUuid } from "@nearpay-internal/ids";
 import { checkoutSession, mintTestToken, type Started, startPostgres, testKeySource } from "@nearpay-internal/testing";
+import { createCheckoutSession, ErrorEnvelope } from "@nearpay-money/spec";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { ApiError, createService, implement, type Service } from "../src/index.js";
 

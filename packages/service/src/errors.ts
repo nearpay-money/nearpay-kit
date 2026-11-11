@@ -4,9 +4,9 @@
  * anything else becomes `500 api_error` (details only in logs).
  */
 
-import { ERRORS, type ErrorCode, type ErrorEnvelope, errorDocUrl, renderErrorMessage } from "@nearpay/spec";
 import { AuthError } from "@nearpay-internal/auth";
 import type { HttpError } from "@nearpay-internal/http";
+import { ERRORS, type ErrorCode, type ErrorEnvelope, errorDocUrl, renderErrorMessage } from "@nearpay-money/spec";
 import type { z } from "zod";
 
 export interface ApiErrorOptions {

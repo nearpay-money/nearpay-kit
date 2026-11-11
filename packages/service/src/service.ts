@@ -8,16 +8,6 @@
 
 import type { IncomingMessage, ServerResponse } from "node:http";
 import {
-  type AnyRoute,
-  HEADERS,
-  type RouteDefinition,
-  type RouteParams,
-  type RouteQuery,
-  type RouteResponse,
-  type ServiceName,
-  toFastifyPath,
-} from "@nearpay/spec";
-import {
   AuthError,
   authorizeRoute,
   type InternalClaims,
@@ -27,6 +17,16 @@ import {
 } from "@nearpay-internal/auth";
 import { runWithContext } from "@nearpay-internal/http";
 import { isId, newId, toUuid } from "@nearpay-internal/ids";
+import {
+  type AnyRoute,
+  HEADERS,
+  type RouteDefinition,
+  type RouteParams,
+  type RouteQuery,
+  type RouteResponse,
+  type ServiceName,
+  toFastifyPath,
+} from "@nearpay-money/spec";
 import type { Span } from "@opentelemetry/api";
 import Fastify, {
   type FastifyInstance,
