@@ -92,11 +92,12 @@ export function jobWorkerTask<DB>(o: Omit<WorkerOptions<DB>, "heartbeat"> & { ma
 
 /**
  * Leader-elected loop as a background task. Followers are idle (never fail `/healthz`); the leader's budget defaults to
- * max(6 × heartbeatMs, 30 s) with `livenessFrom: "leadership"`. With `livenessFrom: "run"`, `run` must call its `beat`
+ * max(12 × heartbeatMs, 60 s) with `livenessFrom: "leadership"` (a run loop slow to honour its abort after a lost
+ * term, e.g. during a DB outage, must not look wedged). With `livenessFrom: "run"`, `run` must call its `beat`
  * at least every `maxSilenceMs` while leading.
  */
 export function leaderTask(o: Omit<LeaderOptions, "heartbeat"> & { maxSilenceMs?: SilenceBudget }): Task {
-  const b = budget(o.maxSilenceMs, Math.max(6 * (o.heartbeatMs ?? 5_000), 30_000));
+  const b = budget(o.maxSilenceMs, Math.max(12 * (o.heartbeatMs ?? 5_000), 60_000));
   return {
     name: `leader:${o.name}`,
     ...b,

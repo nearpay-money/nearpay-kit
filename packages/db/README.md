@@ -13,12 +13,12 @@ Postgres helpers on Kysely + pg: exact numeric types, transactions with retry, m
     `idle_in_transaction_session_timeout` (`connectionTimeoutMs`, `keepAlive`, `idleInTransactionTimeoutMs`); the
     leadership heartbeat must answer within `heartbeatTimeoutMs` (default 2 × heartbeat) or leadership is given up; a term
     shorter than `retryMs` is followed by `retryMs` (+ jitter) before competing again.
-  - KIT-4: `outboxRelayTask` (120 s), `jobWorkerTask` (max(3 × lease, 120 s)), `leaderTask` (max(6 × heartbeat, 30 s),
+  - KIT-4: `outboxRelayTask` (120 s), `jobWorkerTask` (max(3 × lease, 120 s)), `leaderTask` (max(12 × heartbeat, 60 s),
     followers idle) and `recurringJobsTask` (max(3 × tick, 60 s), `livenessFrom: "run"`) declare `maxSilenceMs` and beat the
     heartbeat the service hands to `start`; `maxSilenceMs: false` opts out. `advisoryLeader` passes `beat` to `run`.
   - KIT-6: kit migration `0000_kit_outbox_attempts` adds `outbox.attempts/last_error/first_failed_at`; `relayOnce` counts
     failures per row and moves a `poison` row (payload too large, invalid subject) after `maxAttempts` (5), or an
-    `unroutable` one (no stream) after 5 attempts *and* 5 min of failing, to `dead_letters` (source `outbox`) and carries on;
+    `unroutable` one (no stream) after 5 attempts _and_ 5 min of failing, to `dead_letters` (source `outbox`) and carries on;
     transient errors never dead-letter. `classifyPublishError`, `deadLetter` policy, `onDeadLetter` (default
     `ALERT outbox_dead_lettered` through `onError`).
   - KIT-7: `listDeadLetters`, `getDeadLetter`, `replayDeadLetter` (consumer → handler through the inbox; outbox → requeue

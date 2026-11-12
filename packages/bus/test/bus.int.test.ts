@@ -383,6 +383,7 @@ describe("supervised consume loop (audit KIT-1)", () => {
     await until(
       () => sub.restarts(),
       (n) => n >= 1,
+      30_000,
     );
     const next = event(CREATED);
     await publish(bus, CREATED, next);
@@ -413,11 +414,13 @@ describe("supervised consume loop (audit KIT-1)", () => {
       onDeadLetter: async () => {},
       onError: () => {},
       restartBackoff: { initialMs: 50, maxMs: 100 },
+      pullExpiresMs: 4_000,
     });
     await bus.jsm.streams.delete(stream); // a natsdata loss
     await until(
       () => sub.running(),
       (r) => r === false,
+      30_000, // immediate when a pull is pending, else after two missed idle heartbeats (~10 s)
     );
     await new Promise((r) => setTimeout(r, 300)); // several failed restarts (stream not found)
     expect(sub.running()).toBe(false);
@@ -450,6 +453,7 @@ describe("supervised consume loop (audit KIT-1)", () => {
     await until(
       () => sub.running(),
       (r) => r === false,
+      30_000,
     );
     const t0 = Date.now();
     await sub.stop();
@@ -464,12 +468,15 @@ describe("supervised consume loop (audit KIT-1)", () => {
       release = r;
     });
     const target = event(CREATED);
+    let entered = false;
     const sub = await subscribe(bus, {
       stream: STREAM,
       durable,
       filterSubjects: [CREATED],
       handler: async (e) => {
-        if (e.id === target.id) await hung;
+        if (e.id !== target.id) return;
+        entered = true;
+        await hung;
       },
       onDeadLetter: async () => {},
       heartbeat: { beat: () => void beats++, idle: () => {} },
@@ -482,7 +489,10 @@ describe("supervised consume loop (audit KIT-1)", () => {
     await new Promise((r) => setTimeout(r, 2_200));
     expect(beats - idleStart).toBeGreaterThanOrEqual(2);
     await publish(bus, CREATED, target);
-    await new Promise((r) => setTimeout(r, 300));
+    await until(
+      () => entered,
+      (v) => v,
+    );
     const hungStart = beats;
     await new Promise((r) => setTimeout(r, 2_200));
     expect(beats).toBe(hungStart);

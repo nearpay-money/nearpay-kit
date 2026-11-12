@@ -144,6 +144,8 @@ export interface SubscribeOptions {
   backoffSeconds?: readonly number[];
   /** Messages buffered per pull (default 10). Handlers run one at a time per subscription. */
   maxMessages?: number;
+  /** Pull request expiry, ms (default 10 000; idle heartbeats every half of it detect a vanished durable). */
+  pullExpiresMs?: number;
   onError?: (e: unknown) => void;
   /** Delays between restarts of the consume loop (KIT-1; default 1 s → 60 s). */
   restartBackoff?: RestartBackoff;
@@ -261,7 +263,13 @@ export async function subscribe(bus: Bus, o: SubscribeOptions): Promise<Supervis
     const consumer = await bus.js.consumers.get(o.stream, o.durable);
     // A deleted durable or stream ends the iterator instead of spinning on "consumer not found" forever; the
     // supervisor below re-creates it.
-    return consumer.consume({ max_messages: o.maxMessages ?? 10, abort_on_missing_resource: true });
+    // Pulls expire after 10 s (idle heartbeat 5 s), so a durable or stream deleted while no pull is pending is noticed
+    // within ~2 missed heartbeats instead of ~30 s.
+    return consumer.consume({
+      max_messages: o.maxMessages ?? 10,
+      expires: o.pullExpiresMs ?? 10_000,
+      abort_on_missing_resource: true,
+    });
   }
 
   const deadLetter = async (m: JsMsg, raw: unknown, error: string) => {

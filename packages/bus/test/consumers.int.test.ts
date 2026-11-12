@@ -106,7 +106,7 @@ describe("domainConsumersTask liveness (KIT-1, KIT-4)", () => {
     expect(sub.running()).toBe(true);
     // one durable dies and waits a minute to restart: the task's heartbeat must not be kept alive by the other one
     await bus.jsm.consumers.delete("EVT_AGENTPAY", "webhooks--EVT_AGENTPAY");
-    await until(() => !sub.running());
+    await until(() => !sub.running(), 30_000);
     await new Promise((r) => setTimeout(r, 1_200));
     const before = beats;
     await new Promise((r) => setTimeout(r, 2_200));

@@ -187,7 +187,7 @@ describe("leadership (KIT-5, KIT-4)", () => {
     const b = counter();
     const block = (signal: AbortSignal) => new Promise<void>((r) => signal.addEventListener("abort", () => r()));
     const ta = leaderTask({ pool: database.pool, name: "test:live", retryMs: 50, heartbeatMs: 50, run: block });
-    expect(ta.maxSilenceMs).toBe(30_000);
+    expect(ta.maxSilenceMs).toBe(60_000);
     expect(
       leaderTask({ pool: database.pool, name: "x", run: block, maxSilenceMs: false }).maxSilenceMs,
     ).toBeUndefined();
