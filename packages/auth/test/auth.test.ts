@@ -159,7 +159,7 @@ describe("authorizeRoute (spec route definitions)", () => {
 });
 
 describe("serviceTokenClient", () => {
-  it("caches until 30 s before expiry and shares one in-flight request", async () => {
+  it("caches, shares one in-flight request, and refreshes in the background from exp − 60 s", async () => {
     let t = 1000;
     let n = 0;
     const f = vi.fn(async (_url: string, init: RequestInit) => {
@@ -178,12 +178,128 @@ describe("serviceTokenClient", () => {
     });
     const [a, b] = await Promise.all([c.getToken(), c.getToken()]);
     expect([a, b]).toEqual(["tok1", "tok1"]);
-    t += 269;
+    t += 239;
     expect(await c.getToken()).toBe("tok1");
-    t += 1;
-    expect(await c.getToken()).toBe("tok2");
+    expect(f).toHaveBeenCalledTimes(1);
+    t += 1; // exp − 60 s: the caller is not kept waiting, the refresh runs behind it
+    expect(await c.getToken()).toBe("tok1");
+    await vi.waitFor(() => expect(f).toHaveBeenCalledTimes(2));
+    await vi.waitFor(async () => expect(await c.getToken()).toBe("tok2"));
     expect(f).toHaveBeenCalledTimes(2);
   });
+
+  describe("identity outage (audit KIT-3)", () => {
+    const setup = () => {
+      let t = 10_000;
+      let n = 0;
+      let down = false;
+      const failing = vi.fn();
+      const recovered = vi.fn();
+      const f = vi.fn(async () => {
+        if (down) throw new TypeError("fetch failed");
+        n += 1;
+        return Response.json({ access_token: `tok${n}`, token_type: "Bearer", expires_in: 300 });
+      }) as unknown as typeof fetch;
+      const c = serviceTokenClient({
+        identityUrl: "http://identity-api:8080",
+        clientId: "rails",
+        secret: "s",
+        fetch: f,
+        now: () => t,
+        random: () => 0.5,
+        onRefreshFailing: failing,
+        onRefreshRecovered: recovered,
+      });
+      return {
+        c,
+        f: f as unknown as ReturnType<typeof vi.fn>,
+        failing,
+        recovered,
+        at: (s: number) => {
+          t = 10_000 + s;
+        },
+        setDown: (d: boolean) => {
+          down = d;
+        },
+        settle: () => new Promise((r) => setTimeout(r, 0)),
+      };
+    };
+
+    it("serves the cached token past its refresh point while identity is down, until exp − 5 s", async () => {
+      const x = setup();
+      expect(await x.c.getToken()).toBe("tok1");
+      x.setDown(true);
+      x.at(240); // refresh point: background refresh fails, the caller still gets the valid token
+      expect(await x.c.getToken()).toBe("tok1");
+      await x.settle();
+      expect(x.f).toHaveBeenCalledTimes(2);
+      expect(x.failing).toHaveBeenCalledTimes(1);
+      expect(x.failing.mock.calls[0]?.[1]).toEqual({ clientId: "rails", consecutive: 1, usableForSeconds: 55 });
+      x.at(294); // exp − 6 s: still usable
+      expect(await x.c.getToken()).toBe("tok1");
+      await x.settle();
+      x.at(295); // exp − 5 s: no usable token any more, the caller sees identity's error
+      await expect(x.c.getToken()).rejects.toThrow(/fetch failed/);
+      expect(x.failing).toHaveBeenCalledTimes(1); // logged once per streak
+    });
+
+    it("retries the background refresh with back-off, not on every call", async () => {
+      const x = setup();
+      await x.c.getToken();
+      x.setDown(true);
+      x.at(240);
+      await x.c.getToken();
+      await x.settle();
+      expect(x.f).toHaveBeenCalledTimes(2); // 1st failure → next attempt ≥ 1 s later
+      await x.c.getToken();
+      await x.c.getToken();
+      await x.settle();
+      expect(x.f).toHaveBeenCalledTimes(2);
+      x.at(241);
+      await x.c.getToken();
+      await x.settle();
+      expect(x.f).toHaveBeenCalledTimes(3); // 2nd failure → 2 s
+      x.at(242);
+      await x.c.getToken();
+      await x.settle();
+      expect(x.f).toHaveBeenCalledTimes(3);
+      x.at(243);
+      await x.c.getToken();
+      await x.settle();
+      expect(x.f).toHaveBeenCalledTimes(4); // 3rd failure → 4 s
+      x.at(246);
+      await x.c.getToken();
+      await x.settle();
+      expect(x.f).toHaveBeenCalledTimes(4);
+    });
+
+    it("a later success replaces the cached token and reports recovery", async () => {
+      const x = setup();
+      await x.c.getToken();
+      x.setDown(true);
+      x.at(250);
+      expect(await x.c.getToken()).toBe("tok1");
+      await x.settle();
+      x.setDown(false);
+      x.at(260);
+      expect(await x.c.getToken()).toBe("tok1"); // served at once; the refresh succeeds behind it
+      await x.settle();
+      await vi.waitFor(async () => expect(await x.c.getToken()).toBe("tok2"));
+      expect(x.recovered).toHaveBeenCalledWith({ clientId: "rails", failures: 1 });
+      x.at(260 + 239);
+      expect(await x.c.getToken()).toBe("tok2"); // the new token's own refresh point is 240 s after issue
+    });
+
+    it("without a usable token, a failure is thrown at once (no stale token is ever returned)", async () => {
+      const x = setup();
+      x.setDown(true);
+      await expect(x.c.getToken()).rejects.toThrow(/fetch failed/);
+      expect(x.failing.mock.calls[0]?.[1]).toMatchObject({ usableForSeconds: 0 });
+      x.setDown(false);
+      expect(await x.c.getToken()).toBe("tok1");
+    });
+  });
+
   it("reports rejected credentials as invalid_client", async () => {
     const f = vi.fn(async () => new Response("", { status: 401 })) as unknown as typeof fetch;
     await expect(
