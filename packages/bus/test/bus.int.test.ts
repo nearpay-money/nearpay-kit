@@ -15,6 +15,7 @@ import {
   busReady,
   connectBus,
   consumerLag,
+  consumerRunning,
   type Envelope,
   ensureStreams,
   publish,
@@ -347,5 +348,148 @@ describe("subscribe", () => {
         onDeadLetter: async () => {},
       }),
     ).rejects.toThrow(/filter subject/);
+  });
+});
+
+describe("supervised consume loop (audit KIT-1)", () => {
+  it("re-creates a deleted durable and processes the next message", async () => {
+    const durable = "kit1-deleted";
+    const got: string[] = [];
+    const errors: string[] = [];
+    const restarts: number[] = [];
+    const runningChanges: boolean[] = [];
+    const sub = await subscribe(bus, {
+      stream: STREAM,
+      durable,
+      filterSubjects: [CREATED],
+      handler: async (e) => void got.push(e.id),
+      onDeadLetter: async () => {},
+      onError: (e) => errors.push((e as Error).message),
+      onRunningChange: (r) => runningChanges.push(r),
+      onRestart: (r) => restarts.push(r.attempt),
+      restartBackoff: { initialMs: 50, maxMs: 200 },
+    });
+    const first = event(CREATED);
+    await publish(bus, CREATED, first);
+    await until(
+      () => got,
+      (ids) => ids.includes(first.id),
+    );
+    expect(sub.running()).toBe(true);
+    expect(consumerRunning()[durable]).toBe(true);
+
+    await bus.jsm.consumers.delete(STREAM, durable);
+    await until(
+      () => sub.restarts(),
+      (n) => n >= 1,
+    );
+    const next = event(CREATED);
+    await publish(bus, CREATED, next);
+    await until(
+      () => got,
+      (ids) => ids.includes(next.id),
+    );
+    expect(sub.running()).toBe(true);
+    expect(errors.some((m) => m.startsWith(`consumer ${durable}:`) && m.endsWith("restarting"))).toBe(true);
+    expect(restarts[0]).toBe(1);
+    expect(runningChanges.slice(0, 3)).toEqual([true, false, true]);
+    expect((await bus.jsm.consumers.info(STREAM, durable)).config.filter_subjects).toEqual([CREATED]);
+    await sub.stop();
+    expect(sub.running()).toBe(false);
+    expect(consumerRunning()[durable]).toBeUndefined();
+  });
+
+  it("keeps retrying while the stream is gone and resumes once it is back", async () => {
+    const stream = STREAMS.billing.name;
+    const subject = "evt.billing.invoice.paid";
+    const durable = "kit1-stream";
+    const got: string[] = [];
+    const sub = await subscribe(bus, {
+      stream,
+      durable,
+      filterSubjects: ["evt.billing.>"],
+      handler: async (e) => void got.push(e.id),
+      onDeadLetter: async () => {},
+      onError: () => {},
+      restartBackoff: { initialMs: 50, maxMs: 100 },
+    });
+    await bus.jsm.streams.delete(stream); // a natsdata loss
+    await until(
+      () => sub.running(),
+      (r) => r === false,
+    );
+    await new Promise((r) => setTimeout(r, 300)); // several failed restarts (stream not found)
+    expect(sub.running()).toBe(false);
+    await ensureStreams(bus, [STREAMS.billing]);
+    await until(
+      () => sub.running(),
+      (r) => r === true,
+    );
+    const e = { ...event(CREATED), subject };
+    await jetstream(bus.nc).publish(subject, JSON.stringify(e), { msgID: e.id });
+    await until(
+      () => got,
+      (ids) => ids.includes(e.id),
+    );
+    await sub.stop();
+  });
+
+  it("stop() during the restart back-off resolves promptly", async () => {
+    const durable = "kit1-stop";
+    const sub = await subscribe(bus, {
+      stream: STREAM,
+      durable,
+      filterSubjects: [CREATED],
+      handler: async () => {},
+      onDeadLetter: async () => {},
+      onError: () => {},
+      restartBackoff: { initialMs: 60_000, maxMs: 60_000 },
+    });
+    await bus.jsm.consumers.delete(STREAM, durable);
+    await until(
+      () => sub.running(),
+      (r) => r === false,
+    );
+    const t0 = Date.now();
+    await sub.stop();
+    expect(Date.now() - t0).toBeLessThan(1_000);
+  });
+
+  it("beats while alive (even with nothing to consume) and goes silent while a handler hangs", async () => {
+    const durable = "kit1-heartbeat";
+    let beats = 0;
+    let release: () => void = () => {};
+    const hung = new Promise<void>((r) => {
+      release = r;
+    });
+    const target = event(CREATED);
+    const sub = await subscribe(bus, {
+      stream: STREAM,
+      durable,
+      filterSubjects: [CREATED],
+      handler: async (e) => {
+        if (e.id === target.id) await hung;
+      },
+      onDeadLetter: async () => {},
+      heartbeat: { beat: () => void beats++, idle: () => {} },
+    });
+    await until(
+      () => consumerLag(bus, STREAM, durable),
+      (n) => n === 0,
+    );
+    const idleStart = beats;
+    await new Promise((r) => setTimeout(r, 2_200));
+    expect(beats - idleStart).toBeGreaterThanOrEqual(2);
+    await publish(bus, CREATED, target);
+    await new Promise((r) => setTimeout(r, 300));
+    const hungStart = beats;
+    await new Promise((r) => setTimeout(r, 2_200));
+    expect(beats).toBe(hungStart);
+    release();
+    await until(
+      () => beats,
+      (n) => n > hungStart,
+    );
+    await sub.stop();
   });
 });

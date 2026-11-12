@@ -1,6 +1,6 @@
 import { CONSUMER_DEFAULTS } from "@nearpay-internal/spec";
 import { describe, expect, it } from "vitest";
-import { redeliveryDelayMs } from "../src/index.js";
+import { redeliveryDelayMs, restartDelayMs } from "../src/index.js";
 
 describe("redeliveryDelayMs", () => {
   it("follows the foundations schedule and repeats its last step", () => {
@@ -20,5 +20,17 @@ describe("redeliveryDelayMs", () => {
     expect(redeliveryDelayMs(0)).toBe(1_000);
     expect(redeliveryDelayMs(-3)).toBe(1_000);
     expect(redeliveryDelayMs(3, [])).toBe(0);
+  });
+});
+
+describe("restartDelayMs (KIT-1)", () => {
+  it("doubles from 1 s to a 60 s cap with ±20 % jitter", () => {
+    const mid = () => 0.5;
+    expect([0, 1, 2, 5, 6, 7, 30].map((a) => restartDelayMs(a, {}, mid))).toEqual([
+      1_000, 2_000, 4_000, 32_000, 60_000, 60_000, 60_000,
+    ]);
+    expect(restartDelayMs(0, {}, () => 0)).toBe(800);
+    expect(restartDelayMs(0, {}, () => 1)).toBe(1_200);
+    expect(restartDelayMs(3, { initialMs: 10, maxMs: 50 }, mid)).toBe(50);
   });
 });
