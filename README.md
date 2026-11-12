@@ -63,13 +63,13 @@ Needs Node 22 (`.nvmrc`) and pnpm 9. The kit takes the two spec packages from a 
 
 ## Commands
 
-| Command                 | What it does                                                                                                        |
-| ----------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| Command                          | What it does                                                                                                       |
+| -------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
 | `pnpm install --frozen-lockfile` | Install (Node 22, pnpm 9); `@nearpay-money/*` and `@nearpay-internal/*` resolve from the local registry (`.npmrc`) |
-| `pnpm test`             | Unit tests                                                                                                          |
-| `pnpm test:integration` | Integration tests on real Postgres, NATS and Valkey (Testcontainers; needs Docker)                                  |
-| `pnpm verify`           | typecheck + lint + all tests + build                                                                                |
-| `pnpm release:local`    | Verify, then publish the packages to the local registry (`NP_REGISTRY_URL`, `NP_REGISTRY_PASSWORD`); idempotent |
+| `pnpm test`                      | Unit tests                                                                                                         |
+| `pnpm test:integration`          | Integration tests on real Postgres, NATS and Valkey (Testcontainers; needs Docker)                                 |
+| `pnpm verify`                    | typecheck + lint + all tests + build                                                                               |
+| `pnpm release:local`             | Verify, then publish the packages to the local registry (`NP_REGISTRY_URL`, `NP_REGISTRY_PASSWORD`); idempotent    |
 
 `NP_LIVE_NEAR=1 pnpm exec vitest run --project integration packages/intents/test/live.int.test.ts` runs read-only checks of the signing formats against the live `intents.near` contract on NEAR mainnet (view calls and simulation only; no transactions, no funds; needs outbound access to a NEAR RPC, no Docker). Without the variable those tests are skipped. `nearpay-deploy/scripts/up.sh` publishes the kit automatically when the pinned version is missing from the local registry.
 
