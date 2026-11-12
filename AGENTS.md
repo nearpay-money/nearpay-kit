@@ -1,6 +1,6 @@
 # AGENTS.md — nearpay-kit
 
-You are working in **nearpay-kit**, one of 27 NearPay repositories (`nearpay-brain/architecture/repositories.md`).
+You are working in **nearpay-kit**, one of 26 NearPay repositories (`nearpay-brain/architecture/repositories.md`).
 Scope: Small, versioned TypeScript runtime libraries shared by services: integer money, IDs, service bootstrap (Fastify + OpenTelemetry), Postgres helpers (outbox, inbox, idempotency), internal auth, NEAR Intents payload build/sign/verify, chain address validation, test utilities.
 
 ## Before changing anything
