@@ -48,9 +48,27 @@ export interface BreakerOptions {
   minCalls?: number;
   windowMs?: number;
   halfOpenAfterMs?: number;
+  /**
+   * A half-open probe that has neither reported (`record`) nor been released within this time counts as failed: the
+   * breaker re-opens and half-opens again after `halfOpenAfterMs` (default 30 s). A safety net only — the client
+   * always reports or releases its probe; this bounds the damage of a caller that does not (KIT-2).
+   */
+  probeTimeoutMs?: number;
+  /** Called on every state change (logs, metrics). Exceptions are swallowed. */
+  onStateChange?: (state: BreakerState, previous: BreakerState) => void;
 }
 
 export type BreakerState = "closed" | "open" | "half_open";
+
+/**
+ * What `beforeCall` grants: hand it back to `record` (verdict) or `release` (no verdict). `probe` marks the single
+ * half-open trial call. `generation` ties the result to the breaker period it started in, so a call that began before
+ * the breaker opened can never close it, and a probe that timed out cannot decide the next one.
+ */
+export interface BreakerPermit {
+  readonly probe: boolean;
+  readonly generation: number;
+}
 
 export class BreakerOpenError extends Error {
   constructor(readonly target: string) {
@@ -59,56 +77,132 @@ export class BreakerOpenError extends Error {
   }
 }
 
-export function circuitBreaker(opts: BreakerOptions = {}, now: () => number = Date.now) {
+export interface CircuitBreaker {
+  /** Current state (open turns half-open after `halfOpenAfterMs`; a stale probe re-opens). */
+  state(): BreakerState;
+  /** Throws BreakerOpenError when calls are not allowed; otherwise returns the permit for this call. */
+  beforeCall(target: string): BreakerPermit;
+  /**
+   * Reports a call's outcome. With the permit from `beforeCall`, only results that belong to the current period count;
+   * without one (legacy callers) a result while half-open decides the probe.
+   */
+  record(ok: boolean, permit?: BreakerPermit): void;
+  /** Returns a permit without a verdict (the call never reached the target, or the caller aborted it). */
+  release(permit: BreakerPermit): void;
+}
+
+/**
+ * Opens at `failureRate` failures over ≥ `minCalls` calls in `windowMs`; half-opens after `halfOpenAfterMs`, then lets
+ * exactly one probe through: success closes, failure re-opens. The probe slot is freed on every outcome — `record`,
+ * `release`, or the `probeTimeoutMs` safety net — so the breaker always eventually closes or re-opens and can never
+ * stay half-open refusing every call (audit KIT-2).
+ */
+export function circuitBreaker(opts: BreakerOptions = {}, now: () => number = Date.now): CircuitBreaker {
   const rate = opts.failureRate ?? 0.5;
   const minCalls = opts.minCalls ?? 20;
   const windowMs = opts.windowMs ?? 30_000;
   const halfOpenAfter = opts.halfOpenAfterMs ?? 15_000;
+  const probeTimeout = opts.probeTimeoutMs ?? 30_000;
   let calls: { t: number; ok: boolean }[] = [];
-  let state: BreakerState = "closed";
+  let current: BreakerState = "closed";
+  let generation = 0;
   let openedAt = 0;
   let probing = false;
+  let probeStartedAt = 0;
+
+  const transition = (next: BreakerState) => {
+    if (next === current) return;
+    const previous = current;
+    current = next;
+    generation++;
+    probing = false;
+    if (next === "open") openedAt = now();
+    if (next === "closed") calls = [];
+    try {
+      opts.onStateChange?.(next, previous);
+    } catch {
+      // an observer must never break the breaker
+    }
+  };
 
   const prune = () => {
     const cutoff = now() - windowMs;
     calls = calls.filter((c) => c.t >= cutoff);
   };
 
+  const resolveProbe = (ok: boolean) => transition(ok ? "closed" : "open");
+
+  const state = (): BreakerState => {
+    if (current === "open" && now() - openedAt >= halfOpenAfter) transition("half_open");
+    if (current === "half_open" && probing && now() - probeStartedAt >= probeTimeout) transition("open");
+    return current;
+  };
+
   return {
-    state(): BreakerState {
-      if (state === "open" && now() - openedAt >= halfOpenAfter) state = "half_open";
-      return state;
-    },
-    /** Throws BreakerOpenError when calls are not allowed. */
-    beforeCall(target: string): void {
-      const s = this.state();
+    state,
+    beforeCall(target) {
+      const s = state();
       if (s === "open") throw new BreakerOpenError(target);
       if (s === "half_open") {
         if (probing) throw new BreakerOpenError(target);
         probing = true;
+        probeStartedAt = now();
+        return { probe: true, generation };
       }
+      return { probe: false, generation };
     },
-    record(ok: boolean): void {
-      if (state === "half_open" || probing) {
-        probing = false;
-        if (ok) {
-          state = "closed";
-          calls = [];
-        } else {
-          state = "open";
-          openedAt = now();
+    record(ok, permit) {
+      const s = state();
+      if (permit) {
+        if (permit.generation !== generation) return; // a result from an earlier period
+        if (permit.probe) {
+          if (s === "half_open" && probing) resolveProbe(ok);
+          return;
         }
+        if (s !== "closed") return;
+      } else if (s === "half_open" || probing) {
+        resolveProbe(ok);
+        return;
+      } else if (s === "open") {
         return;
       }
       calls.push({ t: now(), ok });
       prune();
       const failures = calls.filter((c) => !c.ok).length;
-      if (calls.length >= minCalls && failures / calls.length >= rate) {
-        state = "open";
-        openedAt = now();
-      }
+      if (calls.length >= minCalls && failures / calls.length >= rate) transition("open");
+    },
+    release(permit) {
+      if (permit.probe && permit.generation === generation && current === "half_open") probing = false;
     },
   };
+}
+
+// ---------------------------------------------------------------------------------------------
+// Breaker registry (metrics: `http_breaker_open{target}`)
+// ---------------------------------------------------------------------------------------------
+
+const breakers = new Set<WeakRef<CircuitBreaker>>();
+const breakerTargets = new WeakMap<CircuitBreaker, string>();
+
+/**
+ * State of every live client breaker, by target (the least healthy one when several clients share a target).
+ * `@nearpay-internal/service` exports it as `http_breaker_open{target}` (1 when open or half-open).
+ */
+export function breakerStates(): Record<string, BreakerState> {
+  const rank = { closed: 0, half_open: 1, open: 2 } as const;
+  const out: Record<string, BreakerState> = {};
+  for (const ref of breakers) {
+    const breaker = ref.deref();
+    const target = breaker && breakerTargets.get(breaker);
+    if (!breaker || target === undefined) {
+      breakers.delete(ref);
+      continue;
+    }
+    const s = breaker.state();
+    const prev = out[target];
+    if (prev === undefined || rank[s] > rank[prev]) out[target] = s;
+  }
+  return out;
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -162,6 +256,8 @@ export interface HttpClientOptions {
   readonly now?: () => number;
   readonly sleep?: (ms: number) => Promise<void>;
   readonly random?: () => number;
+  /** Called when the client's circuit breaker changes state (logs; the gauge is automatic, see `breakerStates`). */
+  readonly onBreakerStateChange?: (state: BreakerState, target: string) => void;
   /** Observer for metrics: outcome per attempt. */
   readonly onResult?: (r: {
     target: string;
@@ -216,14 +312,34 @@ export function httpClient(opts: HttpClientOptions) {
   const sleep = opts.sleep ?? ((ms: number) => new Promise<void>((r) => setTimeout(r, ms)));
   const random = opts.random ?? Math.random;
   const attempts = opts.attempts ?? 3;
-  const breaker = opts.breaker === false ? null : circuitBreaker(opts.breaker ?? {}, now);
+  const breakerOpts = opts.breaker === false ? null : (opts.breaker ?? {});
+  const breaker =
+    breakerOpts === null
+      ? null
+      : circuitBreaker(
+          {
+            // A probe outlives at most one call (timeout covers the body read), plus slack.
+            probeTimeoutMs: Math.max(30_000, 2 * opts.timeoutMs),
+            ...breakerOpts,
+            onStateChange: (state, previous) => {
+              breakerOpts.onStateChange?.(state, previous);
+              opts.onBreakerStateChange?.(state, opts.target);
+            },
+          },
+          now,
+        );
+  if (breaker) {
+    breakerTargets.set(breaker, opts.target);
+    breakers.add(new WeakRef(breaker));
+  }
   const base = opts.baseUrl.replace(/\/$/, "");
 
   async function attempt(o: RequestOptions, ctx: RequestContext): Promise<HttpResponse> {
     const remaining = ctx.deadline !== undefined ? ctx.deadline - now() - 100 : Number.POSITIVE_INFINITY;
     const timeout = Math.min(o.timeoutMs ?? opts.timeoutMs, remaining);
     if (timeout <= 0) throw new TimeoutError(opts.target, 0);
-    breaker?.beforeCall(opts.target);
+    // Everything that can fail without contacting the target happens before the breaker grants a permit: a failing
+    // token source (identity down) or an unserialisable body must never hold the half-open probe slot (KIT-2).
     const headers: Record<string, string> = { accept: "application/json", ...o.headers };
     if (o.body !== undefined) headers["content-type"] = "application/json";
     if (ctx.requestId) headers[HEADERS.requestId] = ctx.requestId;
@@ -234,24 +350,34 @@ export function httpClient(opts: HttpClientOptions) {
         opts.forwardRequestToken && ctx.token ? ctx.token : opts.serviceToken ? await opts.serviceToken() : undefined;
       if (token) headers[HEADERS.token] = token;
     }
+    const payload = o.body === undefined ? undefined : JSON.stringify(o.body);
+    const url = `${base}${o.path}${queryString(o.query)}`;
+
+    const permit = breaker?.beforeCall(opts.target);
+    // Verdict for the breaker: true/false = the target answered well/badly; null = no verdict (the caller aborted).
+    let verdict = false as boolean | null;
     const started = now();
     const signal = o.signal ? AbortSignal.any([o.signal, AbortSignal.timeout(timeout)]) : AbortSignal.timeout(timeout);
     let res: Response;
+    let text: string;
     try {
-      res = await f(`${base}${o.path}${queryString(o.query)}`, {
-        method: o.method,
-        headers,
-        body: o.body === undefined ? undefined : JSON.stringify(o.body),
-        signal,
-      });
+      res = await f(url, { method: o.method, headers, body: payload, signal });
+      text = await res.text(); // the timeout signal covers the body read too
+      verdict = res.status < 500;
     } catch (e) {
-      breaker?.record(false);
-      const timedOut = (e as Error).name === "TimeoutError" || (e as Error).name === "AbortError";
+      const timedOut = (e as Error)?.name === "TimeoutError" || (e as Error)?.name === "AbortError";
+      const callerAborted = timedOut && o.signal?.aborted === true;
+      verdict = callerAborted ? null : false;
       opts.onResult?.({ target: opts.target, outcome: timedOut ? "timeout" : "error", ms: now() - started });
-      if (timedOut && !o.signal?.aborted) throw new TimeoutError(opts.target, timeout);
+      if (timedOut && !callerAborted) throw new TimeoutError(opts.target, timeout);
       throw e;
+    } finally {
+      // Always settle the permit — success, failure, timeout or abort — so a probe can never leak (KIT-2).
+      if (breaker && permit) {
+        if (verdict === null) breaker.release(permit);
+        else breaker.record(verdict, permit);
+      }
     }
-    const text = await res.text();
     let body: unknown = text;
     if (text && (res.headers.get("content-type") ?? "").includes("json")) {
       try {
@@ -260,7 +386,6 @@ export function httpClient(opts: HttpClientOptions) {
         body = text;
       }
     }
-    breaker?.record(res.status < 500);
     opts.onResult?.({
       target: opts.target,
       outcome: res.status < 500 ? "ok" : "error",
