@@ -57,10 +57,10 @@ afterAll(async () => {
 describe("migrations", () => {
   it("applies kit tables then service files, once, even with concurrent migrators", async () => {
     const [a, b] = await Promise.all([migrate(db, migDir), migrate(createDb<Svc>({ url: pg.url }).db, migDir)]);
-    expect([...a, ...b].sort()).toEqual(["0000_kit_shared_tables", "0001_widgets"]);
+    expect([...a, ...b].sort()).toEqual(["0000_kit_outbox_attempts", "0000_kit_shared_tables", "0001_widgets"]);
     expect(await migrate(db, migDir)).toEqual([]);
     expect(await migrationStatus(db, migDir)).toEqual({
-      applied: ["0000_kit_shared_tables", "0001_widgets"],
+      applied: ["0000_kit_outbox_attempts", "0000_kit_shared_tables", "0001_widgets"],
       pending: [],
       drift: [],
     });

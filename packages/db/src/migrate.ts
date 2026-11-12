@@ -35,8 +35,9 @@ function load(dir: string | null): Migration[] {
       out.push({ version, sql: text, checksum: checksum(text) });
     }
   }
+  // Kit migrations all use the reserved 0000_ number (ordered by KIT_MIGRATIONS); service files need unique numbers.
   const seen = new Set<string>();
-  for (const m of out) {
+  for (const m of out.slice(KIT_MIGRATIONS.length)) {
     const n = m.version.slice(0, 4);
     if (seen.has(n)) throw new Error(`duplicate migration number ${n}`);
     seen.add(n);

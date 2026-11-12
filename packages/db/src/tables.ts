@@ -17,6 +17,10 @@ export interface OutboxTable {
   trace: ColumnType<unknown | null, string | null | undefined, string | null>;
   created_at: Timestamp;
   published_at: NullableTimestamp;
+  /** Failed publish attempts of this row (kit 0.6.0, KIT-6). */
+  attempts: Generated<number>;
+  last_error: string | null;
+  first_failed_at: NullableTimestamp;
 }
 
 export interface InboxTable {
@@ -60,6 +64,10 @@ export interface DeadLettersTable {
   error: string;
   created_at: Timestamp;
   resolved_at: NullableTimestamp;
+  /** `replayed` or `dropped` (kit 0.6.0, KIT-7). */
+  resolution: string | null;
+  resolved_by: string | null;
+  resolution_note: string | null;
 }
 
 export interface SchemaMigrationsTable {
@@ -116,6 +124,17 @@ create index jobs_due on jobs (run_at) where done_at is null;
 create table dead_letters (id uuid primary key, source text not null, subject text, payload jsonb not null,
   error text not null, created_at timestamptz not null default now(), resolved_at timestamptz);
 create index dead_letters_open on dead_letters (created_at) where resolved_at is null;
+`,
+  },
+  {
+    // kit 0.6.0: per-row publish failures, so a poison row is moved aside instead of blocking the outbox (KIT-6), and
+    // how a dead letter was resolved (KIT-7). Additive; old code ignores the new columns.
+    version: "0000_kit_outbox_attempts",
+    sql: `
+alter table outbox add column attempts integer not null default 0, add column last_error text,
+  add column first_failed_at timestamptz;
+alter table dead_letters add column resolution text check (resolution in ('replayed','dropped')),
+  add column resolved_by text, add column resolution_note text;
 `,
   },
 ];

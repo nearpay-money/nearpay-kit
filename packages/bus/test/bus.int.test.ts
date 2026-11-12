@@ -1,4 +1,5 @@
 import { jetstream } from "@nats-io/jetstream";
+import { classifyPublishError } from "@nearpay-internal/db";
 import { uuidv7 } from "@nearpay-internal/ids";
 import { durableName, STREAMS } from "@nearpay-internal/spec";
 import {
@@ -491,5 +492,23 @@ describe("supervised consume loop (audit KIT-1)", () => {
       (n) => n > hungStart,
     );
     await sub.stop();
+  });
+});
+
+describe("publish failures as the outbox relay classifies them (KIT-6)", () => {
+  it("an oversized payload is poison, a subject no stream takes is unroutable, a closed connection is transient", async () => {
+    const big = { ...event(CREATED), data: { object: { blob: "x".repeat(1_100_000) } } } as unknown as Envelope;
+    const tooLarge = await publish(bus, CREATED, big).catch((e: unknown) => e);
+    expect(tooLarge).toBeInstanceOf(Error);
+    expect(classifyPublishError(tooLarge)).toBe("poison");
+    const orphan = { ...event(CREATED), subject: "evt.nowhere.thing.happened" } as unknown as Envelope;
+    const noStream = await publish(bus, "evt.nowhere.thing.happened", orphan).catch((e: unknown) => e);
+    expect(noStream).toBeInstanceOf(Error);
+    expect(classifyPublishError(noStream)).toBe("unroutable");
+    const closed = await connectBus({ url: nats.url, name: "kit-closed" });
+    await closed.close();
+    const down = await publish(closed, CREATED, event(CREATED)).catch((e: unknown) => e);
+    expect(down).toBeInstanceOf(Error);
+    expect(classifyPublishError(down)).toBe("retry");
   });
 });

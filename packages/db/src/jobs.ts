@@ -72,6 +72,8 @@ export interface WorkerOptions<DB> {
   onError?: (e: unknown, job?: { id: string; kind: string }) => void;
   onDeadLetter?: (job: { id: string; kind: string; error: string }) => void;
   random?: () => number;
+  /** Liveness (KIT-4): beaten after every poll (failed ones included) and on every `extendLease`. */
+  heartbeat?: { beat(): void; idle(): void };
 }
 
 /** Claims and runs one batch of due jobs. Returns the number of jobs processed. */
@@ -97,6 +99,7 @@ export async function runDueJobs<DB>(o: WorkerOptions<DB>): Promise<number> {
         kind: job.kind,
         attempt: job.attempts + 1,
         extendLease: async (s = lease) => {
+          o.heartbeat?.beat();
           await sql`update jobs set locked_until = now() + make_interval(secs => ${s}) where id = ${job.id} and locked_by = ${o.workerId}`.execute(
             db,
           );
@@ -152,6 +155,7 @@ export function startJobWorker<DB>(o: WorkerOptions<DB>): { stop(): Promise<void
       } catch (e) {
         o.onError?.(e);
       }
+      o.heartbeat?.beat();
       if (n > 0 || stopped) continue;
       await new Promise<void>((r) => {
         const t = setTimeout(r, o.pollMs ?? 500);
