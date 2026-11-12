@@ -9,13 +9,32 @@ import { consume } from "./inbox.js";
 import { enqueueJob, type JobHandler, startJobWorker, type WorkerOptions } from "./jobs.js";
 import { advisoryLeader, type LeaderOptions } from "./leader.js";
 import { recordDeadLetter } from "./maintenance.js";
-import { type Envelope, type Publish, startOutboxRelay } from "./outbox.js";
+import { type Envelope, type RelayOptions, startOutboxRelay } from "./outbox.js";
 import { type Isolation, withTx } from "./tx.js";
+
+/**
+ * Liveness handle, structural twin of `@nearpay-internal/service` `Heartbeat` (KIT-4): `beat()` once per loop iteration
+ * (failed ones included — an outage is readiness, not liveness), `idle()` while not responsible (a leader follower).
+ */
+export interface Heartbeat {
+  beat(): void;
+  idle(): void;
+}
 
 /** Structural twin of `@nearpay-internal/service` `BackgroundTask` (no dependency on the service package). */
 export interface Task {
   readonly name: string;
-  start(): { stop(): Promise<void> } | Promise<{ stop(): Promise<void> }>;
+  /** Liveness budget (KIT-4): the service hands `start` a heartbeat and fails `/healthz` after this much silence. */
+  readonly maxSilenceMs?: number;
+  start(heartbeat?: Heartbeat): { stop(): Promise<void> } | Promise<{ stop(): Promise<void> }>;
+}
+
+/** `maxSilenceMs` option of the kit's tasks: a number overrides the default, `false` opts out of liveness. */
+export type SilenceBudget = number | false | undefined;
+
+function budget(b: SilenceBudget, fallback: number): { maxSilenceMs?: number } {
+  if (b === false) return {};
+  return { maxSilenceMs: b ?? fallback };
 }
 
 /**
@@ -48,22 +67,42 @@ export function deadLetterSink<DB>(
   };
 }
 
-export function outboxRelayTask<DB>(o: {
-  db: Kysely<DB>;
-  pool: pg.Pool;
-  publish: Publish;
-  onError?: (e: unknown) => void;
-  pollMs?: number;
-}): Task {
-  return { name: "outbox-relay", start: () => startOutboxRelay(o) };
+/** Outbox relay as a background task; liveness budget 120 s by default (beats per batch and per published row). */
+export function outboxRelayTask<DB>(o: Omit<RelayOptions<DB>, "heartbeat"> & { maxSilenceMs?: SilenceBudget }): Task {
+  const b = budget(o.maxSilenceMs, 120_000);
+  return {
+    name: "outbox-relay",
+    ...b,
+    start: (heartbeat) => startOutboxRelay({ ...o, ...(heartbeat && b.maxSilenceMs ? { heartbeat } : {}) }),
+  };
 }
 
-export function jobWorkerTask<DB>(o: WorkerOptions<DB>): Task {
-  return { name: "job-worker", start: () => startJobWorker(o) };
+/**
+ * Job worker as a background task; liveness budget max(3 × lease, 120 s) by default. A handler that hangs without
+ * `extendLease` blocks its batch (`Promise.all`) and goes silent.
+ */
+export function jobWorkerTask<DB>(o: Omit<WorkerOptions<DB>, "heartbeat"> & { maxSilenceMs?: SilenceBudget }): Task {
+  const b = budget(o.maxSilenceMs, Math.max(3 * (o.leaseSeconds ?? 60) * 1000, 120_000));
+  return {
+    name: "job-worker",
+    ...b,
+    start: (heartbeat) => startJobWorker({ ...o, ...(heartbeat && b.maxSilenceMs ? { heartbeat } : {}) }),
+  };
 }
 
-export function leaderTask(o: LeaderOptions): Task {
-  return { name: `leader:${o.name}`, start: () => advisoryLeader(o) };
+/**
+ * Leader-elected loop as a background task. Followers are idle (never fail `/healthz`); the leader's budget defaults to
+ * max(12 × heartbeatMs, 60 s) with `livenessFrom: "leadership"` (a run loop slow to honour its abort after a lost
+ * term, e.g. during a DB outage, must not look wedged). With `livenessFrom: "run"`, `run` must call its `beat`
+ * at least every `maxSilenceMs` while leading.
+ */
+export function leaderTask(o: Omit<LeaderOptions, "heartbeat"> & { maxSilenceMs?: SilenceBudget }): Task {
+  const b = budget(o.maxSilenceMs, Math.max(12 * (o.heartbeatMs ?? 5_000), 60_000));
+  return {
+    name: `leader:${o.name}`,
+    ...b,
+    start: (heartbeat) => advisoryLeader({ ...o, ...(heartbeat && b.maxSilenceMs ? { heartbeat } : {}) }),
+  };
 }
 
 export interface RecurringJob {
@@ -96,6 +135,8 @@ export function recurringJobsTask<DB>(o: {
   tickMs?: number;
   now?: () => number;
   onError?: (e: unknown) => void;
+  /** Liveness budget of the leader's tick loop (default max(3 × tickMs, 60 s)); `false` opts out. */
+  maxSilenceMs?: SilenceBudget;
 }): Task {
   for (const j of o.jobs) {
     if (!(j.everyMs >= 1_000)) throw new RangeError(`${j.kind}: everyMs must be at least 1000`);
@@ -116,13 +157,16 @@ export function recurringJobsTask<DB>(o: {
     pool: o.pool,
     name: o.name,
     ...(o.onError ? { onError: o.onError } : {}),
-    run: async (signal) => {
+    livenessFrom: "run",
+    maxSilenceMs: o.maxSilenceMs === false ? false : (o.maxSilenceMs ?? Math.max(3 * (o.tickMs ?? 30_000), 60_000)),
+    run: async (signal, beat) => {
       while (!signal.aborted) {
         try {
           await tick();
         } catch (e) {
           o.onError?.(e);
         }
+        beat();
         await new Promise<void>((r) => {
           const t = setTimeout(r, o.tickMs ?? 30_000);
           signal.addEventListener(

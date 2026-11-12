@@ -1,6 +1,6 @@
 {
   "name": "@nearpay-internal/testing",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "description": "Test utilities: Testcontainers fixtures (Postgres, NATS, Valkey), fake clock, aggregate factories, event expectations, test tokens, spec-driven peer mocks.",
   "license": "Apache-2.0",
   "type": "module",

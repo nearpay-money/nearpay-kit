@@ -1,6 +1,6 @@
 {
   "name": "@nearpay-internal/service",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "description": "Service bootstrap: Fastify routes from spec definitions, internal-token auth, request context, error envelopes, idempotency hook, SSE, health/readiness, Prometheus metrics, tracing, pino, config/secrets, graceful shutdown, process runner.",
   "license": "Apache-2.0",
   "type": "module",

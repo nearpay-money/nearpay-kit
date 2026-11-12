@@ -197,9 +197,36 @@ export interface IdempotencyStore {
   ): Promise<{ status: number; body: unknown; replayed: boolean }>;
 }
 
+/**
+ * Liveness handle of a background loop (audit KIT-4). `beat()` once per iteration or tick — including iterations
+ * that failed because a dependency (DB, NATS, a peer) is down: an outage is readiness, not liveness. `idle()` while the
+ * loop is not responsible for anything (a leader follower); it is excluded from liveness until its next beat.
+ */
+export interface Heartbeat {
+  beat(): void;
+  idle(): void;
+}
+
+/** A heartbeat registered with `service.heartbeat` (for loops that are not background tasks). */
+export interface RegisteredHeartbeat extends Heartbeat {
+  /** Unregisters (the loop ended on purpose). */
+  stop(): void;
+}
+
 export interface BackgroundTask {
   readonly name: string;
-  start(): { stop(): Promise<void> } | Promise<{ stop(): Promise<void> }>;
+  /**
+   * Liveness budget, ms (KIT-4): when set, `start` receives a heartbeat and `/healthz` answers 503 once the task is
+   * active and has not beaten for longer, so Docker/autoheal restart a dead or hung loop.
+   */
+  readonly maxSilenceMs?: number;
+  start(heartbeat?: Heartbeat): { stop(): Promise<void> } | Promise<{ stop(): Promise<void> }>;
+}
+
+export interface LivenessReport {
+  status: "ok" | "stalled";
+  /** Per registered loop: whether it is responsible now, ms since its last beat, and its budget. */
+  loops: Record<string, { active: boolean; silentMs: number; maxSilenceMs: number; stalled: boolean }>;
 }
 
 export type ReadinessCheck = () => Promise<unknown> | unknown;
@@ -240,6 +267,10 @@ export interface Service {
   readonly draining: boolean;
   addReadiness(name: string, check: ReadinessCheck): void;
   addBackground(task: BackgroundTask): void;
+  /** Registers a loop for liveness (KIT-4): `/healthz` fails when it is active and silent for longer than `maxSilenceMs`. */
+  heartbeat(name: string, maxSilenceMs: number): RegisteredHeartbeat;
+  /** Liveness of the registered loops (what `/healthz` answers). */
+  liveness(): LivenessReport;
   /** Runs after HTTP and background tasks stopped, last registered first (close pools, connections). */
   onShutdown(fn: () => Promise<void> | void): void;
   ready(): Promise<ReadyReport>;
@@ -499,9 +530,76 @@ export function createService(o: ServiceOptions): Service {
     return { status: ok ? "ready" : "not_ready", checks };
   }
 
-  app.get("/healthz", { config: { routeId: "health" } }, async (_req, reply) =>
-    reply.type("text/plain; charset=utf-8").send("ok\n"),
-  );
+  // ---- liveness (KIT-4) ----------------------------------------------------------------------------
+
+  interface Loop {
+    readonly name: string;
+    readonly maxSilenceMs: number;
+    last: number;
+    active: boolean;
+    stalled: boolean;
+  }
+  const loops = new Map<string, Loop>();
+
+  function heartbeat(name: string, maxSilenceMs: number): RegisteredHeartbeat {
+    if (!(Number.isFinite(maxSilenceMs) && maxSilenceMs > 0))
+      throw new RangeError(`${name}: maxSilenceMs must be a positive number`);
+    let key = name;
+    for (let i = 2; loops.has(key); i++) key = `${name}#${i}`;
+    const loop: Loop = { name: key, maxSilenceMs, last: Date.now(), active: true, stalled: false };
+    loops.set(key, loop);
+    return {
+      beat() {
+        loop.last = Date.now();
+        loop.active = true;
+      },
+      idle() {
+        loop.active = false;
+      },
+      stop() {
+        if (loops.get(key) === loop) loops.delete(key);
+      },
+    };
+  }
+
+  function liveness(): LivenessReport {
+    const t = Date.now();
+    const out: LivenessReport["loops"] = {};
+    let stalledAny = false;
+    for (const l of loops.values()) {
+      const silentMs = t - l.last;
+      const stalled = !draining && l.active && silentMs > l.maxSilenceMs;
+      if (stalled && !l.stalled)
+        log.error(
+          { task: l.name, silent_ms: silentMs, max_silence_ms: l.maxSilenceMs },
+          "ALERT background_task_stalled",
+        );
+      if (!stalled && l.stalled) log.info({ task: l.name }, "background task beating again");
+      l.stalled = stalled;
+      stalledAny ||= stalled;
+      out[l.name] = { active: l.active, silentMs, maxSilenceMs: l.maxSilenceMs, stalled };
+    }
+    return { status: stalledAny ? "stalled" : "ok", loops: out };
+  }
+
+  metrics.collectBackground(() => {
+    const r = liveness();
+    return Object.fromEntries(
+      Object.entries(r.loops).map(([k, v]) => [k, { silentSeconds: v.silentMs / 1000, stalled: v.stalled }]),
+    );
+  });
+
+  app.get("/healthz", { config: { routeId: "health" } }, async (_req, reply) => {
+    const r = liveness();
+    if (r.status === "ok") return reply.type("text/plain; charset=utf-8").send("ok\n");
+    const stalled = Object.entries(r.loops)
+      .filter(([, v]) => v.stalled)
+      .map(([k, v]) => `${k} (silent ${Math.round(v.silentMs / 1000)} s, max ${Math.round(v.maxSilenceMs / 1000)} s)`);
+    return reply
+      .code(503)
+      .type("text/plain; charset=utf-8")
+      .send(`stalled: ${stalled.join(", ")}\n`);
+  });
   app.get("/readyz", { config: { routeId: "health" } }, async (_req, reply) => {
     const r = await ready();
     return reply.code(r.status === "ready" ? 200 : 503).send(r);
@@ -723,6 +821,7 @@ export function createService(o: ServiceOptions): Service {
   // ---- lifecycle --------------------------------------------------------------------------------
 
   let started: { stop(): Promise<void> }[] = [];
+  const taskBeats: RegisteredHeartbeat[] = [];
   let metricsServer: { port: number; close(): Promise<void> } | null = null;
   let stopping: Promise<void> | null = null;
 
@@ -735,6 +834,7 @@ export function createService(o: ServiceOptions): Service {
       }
     }
     started = [];
+    for (const hb of taskBeats.splice(0)) hb.stop();
   }
 
   return {
@@ -748,6 +848,8 @@ export function createService(o: ServiceOptions): Service {
     },
     addReadiness: (name, check) => void readiness.set(name, check),
     addBackground: (task) => void background.push(task),
+    heartbeat,
+    liveness,
     onShutdown: (fn) => void shutdownHooks.push(fn),
     ready,
 
@@ -757,8 +859,17 @@ export function createService(o: ServiceOptions): Service {
       try {
         metricsServer = await serveMetrics(metrics, config.metricsPort, config.host);
         for (const t of background) {
-          started.push(await t.start());
-          log.info({ task: t.name }, "background task started");
+          const budget = t.maxSilenceMs;
+          if (budget !== undefined && budget > 0) {
+            const hb = heartbeat(t.name, budget);
+            taskBeats.push(hb);
+            started.push(await t.start(hb));
+            hb.beat(); // the budget starts once the task is up
+            log.info({ task: t.name, max_silence_ms: budget }, "background task started");
+          } else {
+            started.push(await t.start());
+            log.info({ task: t.name }, "background task started");
+          }
         }
       } catch (e) {
         await stopBackground();

@@ -1,6 +1,13 @@
 import { domainEvent, paymentIntent, type Started, startNats } from "@nearpay-internal/testing";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { type Bus, connectBus, type Envelope, publish, startDomainConsumers } from "../src/index.js";
+import {
+  type Bus,
+  connectBus,
+  domainConsumersTask,
+  type Envelope,
+  publish,
+  startDomainConsumers,
+} from "../src/index.js";
 
 let nats: Started;
 let bus: Bus;
@@ -66,5 +73,45 @@ describe("startDomainConsumers", () => {
         onDeadLetter: async () => {},
       }),
     ).rejects.toThrow(/not a catalogue subject/);
+  });
+});
+
+describe("domainConsumersTask liveness (KIT-1, KIT-4)", () => {
+  it("declares a silence budget and keeps beating while a failed durable backs off (an outage is not a dead loop)", async () => {
+    const task = domainConsumersTask({
+      bus,
+      consumer: "webhooks",
+      handlers: {
+        "evt.payments.payment_intent.succeeded": async () => {},
+        "evt.agentpay.agent_payment.settled": async () => {},
+      },
+      onDeadLetter: async () => {},
+      onError: () => {},
+      restartBackoff: { initialMs: 60_000, maxMs: 60_000 },
+    });
+    expect(task.maxSilenceMs).toBe(120_000);
+    expect(
+      domainConsumersTask({
+        bus,
+        consumer: "webhooks",
+        handlers: {},
+        onDeadLetter: async () => {},
+        maxSilenceMs: false,
+      }).maxSilenceMs,
+    ).toBeUndefined();
+    let beats = 0;
+    const sub = await task.start({ beat: () => void beats++, idle: () => {} });
+    expect(sub.subscriptions).toHaveLength(2);
+    await until(() => beats >= 2, 5_000);
+    expect(sub.running()).toBe(true);
+    // one durable dies and waits a minute to restart: the task's heartbeat must not be kept alive by the other one
+    await bus.jsm.consumers.delete("EVT_AGENTPAY", "webhooks--EVT_AGENTPAY");
+    await until(() => !sub.running(), 30_000);
+    await new Promise((r) => setTimeout(r, 1_200));
+    const before = beats;
+    await new Promise((r) => setTimeout(r, 2_200));
+    // the dead one is backing off (alive, retrying), so beats continue: an outage is not a dead loop
+    expect(beats).toBeGreaterThan(before);
+    await sub.stop();
   });
 });

@@ -2,7 +2,15 @@ import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
 import { getPaymentIntent } from "@nearpay-money/spec";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
-import { BreakerOpenError, circuitBreaker, HttpError, httpClient, runWithContext, TimeoutError } from "../src/index.js";
+import {
+  BreakerOpenError,
+  breakerStates,
+  circuitBreaker,
+  HttpError,
+  httpClient,
+  runWithContext,
+  TimeoutError,
+} from "../src/index.js";
 
 let server: Server;
 let base = "";
@@ -251,5 +259,192 @@ describe("circuitBreaker", () => {
     expect(c.breakerState()).toBe("open");
     await expect(c.request({ method: "GET", path: "/a" })).rejects.toBeInstanceOf(BreakerOpenError);
     expect(seen).toHaveLength(2);
+  });
+});
+
+describe("circuitBreaker probe settlement (audit KIT-2)", () => {
+  const opened = (t: { v: number }, opts = {}) => {
+    const b = circuitBreaker({ minCalls: 2, ...opts }, () => t.v);
+    b.record(false);
+    b.record(false);
+    expect(b.state()).toBe("open");
+    t.v += 15_000;
+    expect(b.state()).toBe("half_open");
+    return b;
+  };
+
+  it("releases the probe slot without a verdict: the next call probes again", () => {
+    const t = { v: 0 };
+    const b = opened(t);
+    const p = b.beforeCall("x");
+    expect(p.probe).toBe(true);
+    expect(() => b.beforeCall("x")).toThrow(BreakerOpenError);
+    b.release(p);
+    expect(b.state()).toBe("half_open");
+    const q = b.beforeCall("x");
+    expect(q.probe).toBe(true);
+    b.record(true, q);
+    expect(b.state()).toBe("closed");
+  });
+
+  it("re-opens when a probe never reports within probeTimeoutMs, then half-opens again", () => {
+    const t = { v: 0 };
+    const changes: string[] = [];
+    const b = opened(t, { probeTimeoutMs: 30_000, onStateChange: (s: string) => changes.push(s) });
+    b.beforeCall("x"); // leaked by a careless caller
+    t.v += 29_999;
+    expect(() => b.beforeCall("x")).toThrow(BreakerOpenError);
+    t.v += 1;
+    expect(b.state()).toBe("open");
+    t.v += 15_000;
+    expect(b.state()).toBe("half_open");
+    const p = b.beforeCall("x");
+    b.record(true, p);
+    expect(b.state()).toBe("closed");
+    expect(changes).toEqual(["open", "half_open", "open", "half_open", "closed"]);
+  });
+
+  it("ignores results from an earlier period (stale calls never close or re-open it)", () => {
+    const t = { v: 0 };
+    const b = circuitBreaker({ minCalls: 2 }, () => t.v);
+    const early = b.beforeCall("x"); // in flight while the breaker opens
+    b.record(false);
+    b.record(false);
+    t.v += 15_000;
+    const probe = b.beforeCall("x");
+    b.record(true, early); // late success from before the open: not the probe
+    expect(b.state()).toBe("half_open");
+    expect(() => b.beforeCall("x")).toThrow(BreakerOpenError);
+    t.v += 30_000; // the probe timed out and the breaker re-opened …
+    expect(b.state()).toBe("open");
+    b.record(true, probe); // … so its late verdict decides nothing
+    expect(b.state()).toBe("open");
+  });
+
+  it("a probe whose serviceToken rejects does not hold the slot: the next call after halfOpenAfterMs probes", async () => {
+    reset(() => ({ status: 500 }));
+    let t = 0;
+    let tokenFails = false;
+    const c = httpClient({
+      target: "kit2-token",
+      baseUrl: base,
+      timeoutMs: 1000,
+      attempts: 1,
+      breaker: { minCalls: 2 },
+      now: () => t,
+      serviceToken: async () => {
+        if (tokenFails) throw new Error("identity unavailable");
+        return "svc";
+      },
+      ...fast,
+    });
+    await expect(c.request({ method: "GET", path: "/a" })).rejects.toBeInstanceOf(HttpError);
+    await expect(c.request({ method: "GET", path: "/a" })).rejects.toBeInstanceOf(HttpError);
+    expect(c.breakerState()).toBe("open");
+    t += 15_000;
+    tokenFails = true;
+    await expect(c.request({ method: "GET", path: "/a" })).rejects.toThrow(/identity unavailable/);
+    expect(c.breakerState()).toBe("half_open");
+    tokenFails = false;
+    reset(null);
+    await expect(c.request({ method: "GET", path: "/a" })).resolves.toMatchObject({ status: 200 });
+    expect(c.breakerState()).toBe("closed");
+    expect(seen).toHaveLength(1);
+  });
+
+  it("a probe whose body read throws counts as failed and re-opens; the next probe can close it", async () => {
+    let t = 0;
+    let mode: "fail" | "broken-body" | "ok" = "fail";
+    const f = (async () => {
+      if (mode === "fail") return new Response("{}", { status: 503, headers: { "content-type": "application/json" } });
+      if (mode === "ok") return Response.json({ ok: true });
+      const body = new ReadableStream({
+        start(ctrl) {
+          ctrl.enqueue(new TextEncoder().encode("{"));
+          ctrl.error(new Error("socket hang up"));
+        },
+      });
+      return new Response(body, { status: 200, headers: { "content-type": "application/json" } });
+    }) as unknown as typeof fetch;
+    const c = httpClient({
+      target: "kit2-body",
+      baseUrl: "http://peer",
+      timeoutMs: 1000,
+      attempts: 1,
+      breaker: { minCalls: 2 },
+      fetch: f,
+      now: () => t,
+      ...fast,
+    });
+    await expect(c.request({ method: "GET", path: "/a" })).rejects.toBeInstanceOf(HttpError);
+    await expect(c.request({ method: "GET", path: "/a" })).rejects.toBeInstanceOf(HttpError);
+    t += 15_000;
+    mode = "broken-body";
+    await expect(c.request({ method: "GET", path: "/a" })).rejects.toThrow(/socket hang up/);
+    expect(c.breakerState()).toBe("open");
+    t += 15_000;
+    mode = "ok";
+    await expect(c.request({ method: "GET", path: "/a" })).resolves.toMatchObject({ status: 200 });
+    expect(c.breakerState()).toBe("closed");
+  });
+
+  it("a probe that times out (body included) re-opens; a caller abort only releases the slot", async () => {
+    let t = 0;
+    let mode: "fail" | "hang" | "ok" = "fail";
+    const f = (async (_url: string, init: RequestInit) => {
+      if (mode === "fail") return new Response("{}", { status: 500 });
+      if (mode === "ok") return Response.json({ ok: true });
+      const body = new ReadableStream({
+        start(ctrl) {
+          init.signal?.addEventListener("abort", () => ctrl.error(init.signal?.reason));
+        },
+      });
+      return new Response(body, { status: 200 });
+    }) as unknown as typeof fetch;
+    const c = httpClient({
+      target: "kit2-timeout",
+      baseUrl: "http://peer",
+      timeoutMs: 30,
+      attempts: 1,
+      breaker: { minCalls: 2 },
+      fetch: f,
+      now: () => t,
+      ...fast,
+    });
+    await expect(c.request({ method: "GET", path: "/a" })).rejects.toBeInstanceOf(HttpError);
+    await expect(c.request({ method: "GET", path: "/a" })).rejects.toBeInstanceOf(HttpError);
+    t += 15_000;
+    mode = "hang";
+    await expect(c.request({ method: "GET", path: "/a" })).rejects.toBeInstanceOf(TimeoutError);
+    expect(c.breakerState()).toBe("open");
+    t += 15_000;
+    const ac = new AbortController();
+    const pending = c.request({ method: "GET", path: "/a", signal: ac.signal, timeoutMs: 5_000 });
+    await new Promise((r) => setTimeout(r, 10));
+    ac.abort();
+    await expect(pending).rejects.toThrow();
+    expect(c.breakerState()).toBe("half_open"); // released, not failed
+    mode = "ok";
+    await expect(c.request({ method: "GET", path: "/a" })).resolves.toMatchObject({ status: 200 });
+    expect(c.breakerState()).toBe("closed");
+  });
+
+  it("reports every client breaker by target for the http_breaker_open gauge", async () => {
+    reset(() => ({ status: 500 }));
+    const changes: string[] = [];
+    const c = httpClient({
+      target: "kit2-gauge",
+      baseUrl: base,
+      timeoutMs: 1000,
+      attempts: 1,
+      breaker: { minCalls: 2 },
+      onBreakerStateChange: (s, target) => changes.push(`${target}:${s}`),
+      ...fast,
+    });
+    expect(breakerStates()["kit2-gauge"]).toBe("closed");
+    await expect(c.request({ method: "GET", path: "/a" })).rejects.toBeInstanceOf(HttpError);
+    await expect(c.request({ method: "GET", path: "/a" })).rejects.toBeInstanceOf(HttpError);
+    expect(breakerStates()["kit2-gauge"]).toBe("open");
+    expect(changes).toEqual(["kit2-gauge:open"]);
   });
 });

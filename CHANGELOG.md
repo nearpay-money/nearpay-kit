@@ -3,6 +3,65 @@
 All packages in this repository share one version. Breaking changes bump the major version and
 carry a migration note here (semver, foundations §4).
 
+## 0.6.0 — 2026-11-12 (resilience: backend audit 2026-11-12, KIT-1…KIT-7)
+
+`auth`, `bus`, `db`, `http`, `service` and `testing` 0.6.0 (`testing` has no code change; it pins the new `auth` and
+`service`). `ids`, `intents`, `chains`, `money` and `ui` are unchanged and not republished. Design:
+`nearpay-brain/lld/00-foundations.md` §8, §10, §15 (version 1.8). Minor release: public APIs stay source-compatible for
+normal use; the behaviour changes and caveats are listed under "Upgrading".
+
+- **http (KIT-2)** — the half-open probe can no longer leak. The service token is fetched and the body serialised before
+  the breaker grants a permit; the permit is settled in `finally` (verdict on success, 5xx, network error and timeout —
+  the body read included; released without a verdict when the caller aborts). `beforeCall` now returns a
+  `BreakerPermit` for `record(ok, permit)` / `release(permit)`; results from an earlier breaker period are ignored; a probe
+  that never reports re-opens the breaker after `probeTimeoutMs` (default 30 s; the client uses max(30 s, 2 × timeout)).
+  New: `CircuitBreaker` type, `onStateChange`, client `onBreakerStateChange`, `breakerStates()`.
+- **bus (KIT-1)** — `subscribe` supervises its consume loop: when it ends or throws without `stop()` the error is reported
+  and the durable is re-created after 1 s → 60 s jittered back-off (`restartBackoff`), until it consumes again; `stop()`
+  interrupts the back-off. Consumers use `abort_on_missing_resource` (a deleted durable ends the iterator instead of
+  spinning on "consumer not found" forever). Returns `running()` / `restarts()`; `onRunningChange`, `onRestart`,
+  `consumerRunning()`, `restartDelayMs`. `heartbeat` (liveness) beats while the loop is alive, never while a handler hangs
+  or once the connection is closed for good; `domainConsumersTask` declares `maxSilenceMs` 120 s.
+- **auth (KIT-3)** — `serviceTokenClient` refreshes in the background from `exp − 60 s`, keeps serving the cached token
+  until `exp − 5 s` while identity is unavailable, retries with 1 s → 30 s jittered back-off and logs
+  `ALERT service_token_refresh_failing` once per streak (stderr JSON, or `onRefreshFailing` / `onRefreshRecovered`). Only
+  a caller without a usable token waits for identity. Verifiers still enforce `exp`.
+- **service (KIT-4)** — liveness from heartbeats. A `BackgroundTask` with `maxSilenceMs` receives a `Heartbeat` in
+  `start(heartbeat)`; `service.heartbeat(name, maxSilenceMs)` registers other loops; `service.liveness()`. `/healthz`
+  answers 503 `stalled: …` while a registered loop is active and silent beyond its budget; idle loops (leader followers)
+  and dependency outages never fail it. New gauges `background_last_beat_seconds{task}`, `background_task_stalled{task}`,
+  `http_breaker_open{target}` (KIT-2), `consumer_running{durable}` (KIT-1); `ALERT background_task_stalled` log.
+- **db (KIT-5)** — pool `connectionTimeoutMs` 5 s (connect and pool wait), TCP `keepAlive`, server-side
+  `idle_in_transaction_session_timeout` 60 s (`idleInTransactionTimeoutMs`, 0 disables). Leadership heartbeats race
+  `heartbeatTimeoutMs` (2 × heartbeat) and give up leadership on timeout; a term shorter than `retryMs` is followed by
+  `retryMs` + jitter (no hot re-election).
+- **db (KIT-4)** — `outboxRelayTask` (120 s), `jobWorkerTask` (max(3 × lease, 120 s); `extendLease` beats),
+  `leaderTask` (max(12 × heartbeat, 60 s), followers idle, `livenessFrom: "leadership" | "run"`, `run(signal, beat)`) and
+  `recurringJobsTask` (max(3 × tick, 60 s)) declare `maxSilenceMs` (`false` opts out).
+- **db (KIT-6)** — kit migration `0000_kit_outbox_attempts`. `relayOnce` counts failures per row; a `poison` row
+  (payload over `max_payload`, invalid subject) is moved to `dead_letters` (source `outbox`) after `maxAttempts` (5), an
+  `unroutable` one (no stream) after 5 attempts and 5 min of failing; later rows then publish. Transient errors are retried
+  forever. `classifyPublishError`, `deadLetter` policy, `onDeadLetter` (default: `ALERT outbox_dead_lettered` via
+  `onError`). `relayOnce(db, publish, n | options)`.
+- **db (KIT-7)** — `listDeadLetters`, `getDeadLetter`, `replayDeadLetter` (consumer: handler through the inbox; outbox:
+  requeue under the event id; job: re-arm; custom `sources`), `dropDeadLetter`, `pendingOutbox`, `skipOutboxRow`,
+  `requeueOutboxEnvelope`, and `runKitOps(db, "dead-letters" | "outbox", args, {actor, handlers})` + `DEAD_LETTER_USAGE`
+  for every service's ops CLI.
+
+### Upgrading
+
+- **Run the service's `migrate` process before the new code** (Compose already does: `migrate-<svc>` completes first).
+  Until `0000_kit_outbox_attempts` is applied, `/readyz` reports it pending and the relay fails. Rolling a service back to
+  kit ≤ 0.5 after migrating: the old code reports that migration as drift — delete its `schema_migrations` row (the new
+  columns are additive and harmless).
+- `/healthz` can now fail (that is the point): kit tasks have budgets by default. Custom background tasks are unaffected
+  until they declare `maxSilenceMs` and beat. Rails' poller/verifier and other hand-written loops should adopt it.
+- A transaction left idle for 60 s is now terminated by Postgres. Pass `idleInTransactionTimeoutMs` if a service really
+  needs longer.
+- `ServiceMetrics` gained `collectBackground`: only custom implementations of that interface need to add it.
+- `subscribe` no longer leaves a consumer that hit a terminal error idle; services that relied on restarting the process
+  to recover need nothing.
+
 ## 0.5.0 — 2026-11-11 (public spec renamed to `@nearpay-money/spec`)
 
 `auth`, `bus`, `db`, `http`, `ids`, `intents`, `service` and `testing` 0.5.0: depend on **`@nearpay-money/spec`

@@ -2,7 +2,7 @@ import { Writable } from "node:stream";
 import { setTimeout as sleep } from "node:timers/promises";
 import type { ClaimsInput } from "@nearpay-internal/auth";
 import { IdempotencyConflict } from "@nearpay-internal/db";
-import { currentContext } from "@nearpay-internal/http";
+import { currentContext, httpClient } from "@nearpay-internal/http";
 import { newId } from "@nearpay-internal/ids";
 import { getInternalPaymentIntent, getOpsReconciliationRun, resolveOpsReconciliationRun } from "@nearpay-internal/spec";
 import { checkoutSession, mintTestToken, opsHeaders, paymentIntent, testKeySource } from "@nearpay-internal/testing";
@@ -20,12 +20,13 @@ import {
   streamCheckoutSession,
 } from "@nearpay-money/spec";
 import { InMemorySpanExporter } from "@opentelemetry/sdk-trace";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, onTestFinished } from "vitest";
 import {
   ApiError,
   type BaseConfig,
   binary,
   createService,
+  type Heartbeat,
   type IdempotencyStore,
   implement,
   type RouteBinding,
@@ -790,6 +791,108 @@ describe("construction and lifecycle", () => {
     expect(text).toContain("nearpay_payments_external_call_duration_seconds_count");
     expect(text).toContain("nearpay_payments_process_cpu_seconds_total");
     expect((await fetch(`http://127.0.0.1:${metricsPort}/other`)).status).toBe(404);
+  });
+
+  it("fails /healthz when a background task stops beating for longer than maxSilenceMs (KIT-4)", async () => {
+    let beat: () => void = () => {};
+    const got: unknown[] = [];
+    const { s, logs } = make([], {
+      background: [
+        {
+          name: "poller",
+          maxSilenceMs: 150,
+          start: (hb) => {
+            got.push(hb);
+            beat = () => hb?.beat();
+            return { stop: async () => {} };
+          },
+        },
+        {
+          name: "legacy",
+          start: (hb) => {
+            got.push(hb);
+            return { stop: async () => {} };
+          },
+        },
+      ],
+    });
+    await s.start();
+    expect(got[0]).toBeDefined();
+    expect(got[1]).toBeUndefined(); // no budget: no heartbeat, never part of liveness
+    const ok = await s.app.inject("/healthz");
+    expect([ok.statusCode, ok.body]).toEqual([200, "ok\n"]);
+    await sleep(100);
+    beat();
+    await sleep(100);
+    expect((await s.app.inject("/healthz")).statusCode).toBe(200); // 100 ms since the last beat
+    await sleep(100);
+    const dead = await s.app.inject("/healthz");
+    expect(dead.statusCode).toBe(503);
+    expect(dead.body).toMatch(/^stalled: poller \(silent 0 s, max 0 s\)/);
+    expect(s.liveness()).toMatchObject({ status: "stalled", loops: { poller: { active: true, stalled: true } } });
+    expect(logs.lines.filter((l) => l.msg === "ALERT background_task_stalled")).toHaveLength(1);
+    beat();
+    expect((await s.app.inject("/healthz")).statusCode).toBe(200);
+  });
+
+  it("does not fail /healthz for an idle loop (a leader follower) and recovers on its next beat", async () => {
+    let hb: Heartbeat | undefined;
+    const { s } = make([], {
+      background: [
+        {
+          name: "leader:x",
+          maxSilenceMs: 50,
+          start: (h) => {
+            hb = h;
+            return { stop: async () => {} };
+          },
+        },
+      ],
+    });
+    await s.start();
+    hb?.idle();
+    await sleep(120);
+    expect((await s.app.inject("/healthz")).statusCode).toBe(200);
+    expect(s.liveness().loops["leader:x"]).toMatchObject({ active: false, stalled: false });
+    hb?.beat(); // won leadership
+    expect((await s.app.inject("/healthz")).statusCode).toBe(200);
+    await sleep(120);
+    expect((await s.app.inject("/healthz")).statusCode).toBe(503);
+  });
+
+  it("registers loops directly, exports per-loop gauges, and forgets stopped tasks", async () => {
+    const { s } = make([], {
+      background: [{ name: "relay", maxSilenceMs: 60_000, start: () => ({ stop: async () => {} }) }],
+    });
+    const client = httpClient({ target: "kit4-gauge-probe", baseUrl: "http://127.0.0.1:1", timeoutMs: 100 });
+    const reg = Symbol.for("nearpay.kit.bus.consumers");
+    const g = globalThis as { [k: symbol]: unknown };
+    const saved = g[reg];
+    g[reg] = new Map([["payments--EVT_RAILS", new Set([{ running: () => false }])]]);
+    onTestFinished(() => {
+      g[reg] = saved;
+    });
+    const manual = s.heartbeat("ticker", 40);
+    const twin = s.heartbeat("ticker", 40);
+    expect(() => s.heartbeat("bad", 0)).toThrow(RangeError);
+    twin.stop();
+    const { metricsPort } = await s.start();
+    await sleep(80);
+    expect((await s.app.inject("/healthz")).statusCode).toBe(503);
+    const text = await (await fetch(`http://127.0.0.1:${metricsPort}/metrics`)).text();
+    expect(text).toMatch(
+      /nearpay_payments_background_last_beat_seconds\{task="relay"\} 0\.\d+|nearpay_payments_background_last_beat_seconds\{task="relay"\} 0/,
+    );
+    expect(text).toContain('nearpay_payments_background_task_stalled{task="ticker"} 1');
+    expect(text).toContain('nearpay_payments_background_task_stalled{task="relay"} 0');
+    expect(text).not.toContain('task="ticker#2"');
+    expect(text).toContain('nearpay_payments_http_breaker_open{target="kit4-gauge-probe"} 0');
+    expect(text).toContain('nearpay_payments_consumer_running{durable="payments--EVT_RAILS"} 0');
+    manual.stop();
+    expect((await s.app.inject("/healthz")).statusCode).toBe(200);
+    expect(client.breakerState()).toBe("closed");
+    await s.stop();
+    expect(s.liveness().loops).toEqual({});
   });
 
   it("cleans up when a background task fails to start", async () => {

@@ -301,47 +301,148 @@ export interface ServiceTokenClient {
   getToken(): Promise<string>;
 }
 
-/** Fetches and caches a service token until 30 s before expiry; concurrent callers share one request. */
-export function serviceTokenClient(opts: {
+export interface ServiceTokenRefreshFailure {
+  readonly clientId: string;
+  /** Consecutive failed refreshes in this streak (1 on the first). */
+  readonly consecutive: number;
+  /** Seconds the cached token stays usable (0 when there is none). */
+  readonly usableForSeconds: number;
+}
+
+export interface ServiceTokenClientOptions {
   identityUrl: string;
   clientId: string;
   secret?: string;
   secretFile?: string;
   fetch?: typeof fetch;
+  /** Clock in unix seconds. */
   now?: () => number;
-}): ServiceTokenClient {
+  /** Start refreshing this long before expiry, s (default 60). */
+  refreshBeforeSeconds?: number;
+  /** Stop using a cached token this long before expiry, s (default 5). */
+  expiryMarginSeconds?: number;
+  /** Back-off between background refresh attempts, s: 1 → `maxRetrySeconds` (default 30), ×2, ±20 % jitter. */
+  maxRetrySeconds?: number;
+  random?: () => number;
+  /**
+   * Called once per failure streak (the first failure) and on recovery. Default: one JSON log line on stderr,
+   * `ALERT service_token_refresh_failing` (warn) and `service token refresh recovered` (info).
+   */
+  onRefreshFailing?: (e: unknown, info: ServiceTokenRefreshFailure) => void;
+  onRefreshRecovered?: (info: { clientId: string; failures: number }) => void;
+}
+
+const stderrLog = (level: number, msg: string, fields: Record<string, unknown>) => {
+  try {
+    process.stderr.write(`${JSON.stringify({ level, time: Date.now(), ...fields, msg })}\n`);
+  } catch {
+    // logging must never break token handling
+  }
+};
+
+/**
+ * Fetches and caches a service token (foundations §9); concurrent callers share one request.
+ *
+ * Resilient to identity outages (audit KIT-3): from `exp − 60 s` the token is refreshed in the background while
+ * callers keep getting the cached one; a failed refresh is retried with back-off (1 s → 30 s, jitter) and the cached
+ * token is served until `exp − 5 s`. Only a caller without a usable token waits for identity (and gets its error).
+ * Verifiers keep enforcing `exp`, so this changes availability, not security.
+ */
+export function serviceTokenClient(opts: ServiceTokenClientOptions): ServiceTokenClient {
   const f = opts.fetch ?? fetch;
   const now = opts.now ?? (() => Math.floor(Date.now() / 1000));
+  const random = opts.random ?? Math.random;
   const secret = opts.secret ?? (opts.secretFile ? readFileSync(opts.secretFile, "utf8").trim() : undefined);
   if (!secret) throw new Error("service client secret is required");
+  const refreshBefore = Math.max(opts.refreshBeforeSeconds ?? 60, TOKEN_TTL_SECONDS.serviceRefreshBefore);
+  const margin = opts.expiryMarginSeconds ?? 5;
+  const maxRetry = opts.maxRetrySeconds ?? 30;
   const basic = Buffer.from(`${opts.clientId}:${secret}`).toString("base64");
-  let cached: { token: string; refreshAt: number } | null = null;
+  const failing =
+    opts.onRefreshFailing ??
+    ((e: unknown, info: ServiceTokenRefreshFailure) =>
+      stderrLog(40, "ALERT service_token_refresh_failing: identity unavailable, serving the cached service token", {
+        svc: info.clientId,
+        usable_for_s: info.usableForSeconds,
+        err: e instanceof Error ? e.message : String(e),
+      }));
+  const recovered =
+    opts.onRefreshRecovered ??
+    ((info: { clientId: string; failures: number }) =>
+      stderrLog(30, "service token refresh recovered", { svc: info.clientId, failures: info.failures }));
+
+  let cached: { token: string; refreshAt: number; usableUntil: number } | null = null;
   let inflight: Promise<string> | null = null;
+  let failures = 0;
+  let retryAt = 0;
+
+  const notify = (fn: () => void) => {
+    try {
+      fn();
+    } catch {
+      // observers must never break token handling
+    }
+  };
+
+  async function fetchToken(): Promise<string> {
+    const res = await f(`${opts.identityUrl.replace(/\/$/, "")}/internal/service-tokens`, {
+      method: "POST",
+      headers: { authorization: `Basic ${basic}`, "content-type": "application/json" },
+      body: "{}",
+      signal: AbortSignal.timeout(2_000),
+    });
+    if (res.status === 401) throw new AuthError("invalid_client", "service client rejected");
+    if (!res.ok) throw new Error(`service-token endpoint returned ${res.status}`);
+    const body = (await res.json()) as { access_token?: string; expires_in?: number };
+    if (!body.access_token || !body.expires_in) throw new Error("malformed service-token response");
+    const issued = now();
+    const exp = issued + body.expires_in;
+    cached = {
+      token: body.access_token,
+      // a token shorter-lived than the refresh window refreshes from half its lifetime
+      refreshAt: Math.max(exp - refreshBefore, issued + body.expires_in / 2),
+      usableUntil: exp - margin,
+    };
+    return body.access_token;
+  }
+
+  function refresh(): Promise<string> {
+    inflight ??= (async () => {
+      try {
+        const token = await fetchToken();
+        if (failures > 0) {
+          const n = failures;
+          notify(() => recovered({ clientId: opts.clientId, failures: n }));
+        }
+        failures = 0;
+        retryAt = 0;
+        return token;
+      } catch (e) {
+        failures++;
+        const delay = Math.min(2 ** (failures - 1), maxRetry) * (0.8 + 0.4 * random());
+        retryAt = now() + delay;
+        if (failures === 1) {
+          const usableForSeconds = cached ? Math.max(0, cached.usableUntil - now()) : 0;
+          notify(() => failing(e, { clientId: opts.clientId, consecutive: failures, usableForSeconds }));
+        }
+        throw e;
+      } finally {
+        inflight = null;
+      }
+    })();
+    return inflight;
+  }
+
   return {
     async getToken() {
-      if (cached && now() < cached.refreshAt) return cached.token;
-      inflight ??= (async () => {
-        try {
-          const res = await f(`${opts.identityUrl.replace(/\/$/, "")}/internal/service-tokens`, {
-            method: "POST",
-            headers: { authorization: `Basic ${basic}`, "content-type": "application/json" },
-            body: "{}",
-            signal: AbortSignal.timeout(2_000),
-          });
-          if (res.status === 401) throw new AuthError("invalid_client", "service client rejected");
-          if (!res.ok) throw new Error(`service-token endpoint returned ${res.status}`);
-          const body = (await res.json()) as { access_token?: string; expires_in?: number };
-          if (!body.access_token || !body.expires_in) throw new Error("malformed service-token response");
-          cached = {
-            token: body.access_token,
-            refreshAt: now() + body.expires_in - TOKEN_TTL_SECONDS.serviceRefreshBefore,
-          };
-          return body.access_token;
-        } finally {
-          inflight = null;
-        }
-      })();
-      return inflight;
+      const t = now();
+      if (cached && t < cached.refreshAt) return cached.token;
+      if (cached && t < cached.usableUntil) {
+        // Still valid: refresh in the background (with back-off after failures) and serve the cached token.
+        if (!inflight && t >= retryAt) refresh().catch(() => {});
+        return cached.token;
+      }
+      return refresh();
     },
   };
 }

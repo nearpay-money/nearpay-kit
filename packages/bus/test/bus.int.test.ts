@@ -1,4 +1,5 @@
 import { jetstream } from "@nats-io/jetstream";
+import { classifyPublishError } from "@nearpay-internal/db";
 import { uuidv7 } from "@nearpay-internal/ids";
 import { durableName, STREAMS } from "@nearpay-internal/spec";
 import {
@@ -15,6 +16,7 @@ import {
   busReady,
   connectBus,
   consumerLag,
+  consumerRunning,
   type Envelope,
   ensureStreams,
   publish,
@@ -347,5 +349,176 @@ describe("subscribe", () => {
         onDeadLetter: async () => {},
       }),
     ).rejects.toThrow(/filter subject/);
+  });
+});
+
+describe("supervised consume loop (audit KIT-1)", () => {
+  it("re-creates a deleted durable and processes the next message", async () => {
+    const durable = "kit1-deleted";
+    const got: string[] = [];
+    const errors: string[] = [];
+    const restarts: number[] = [];
+    const runningChanges: boolean[] = [];
+    const sub = await subscribe(bus, {
+      stream: STREAM,
+      durable,
+      filterSubjects: [CREATED],
+      handler: async (e) => void got.push(e.id),
+      onDeadLetter: async () => {},
+      onError: (e) => errors.push((e as Error).message),
+      onRunningChange: (r) => runningChanges.push(r),
+      onRestart: (r) => restarts.push(r.attempt),
+      restartBackoff: { initialMs: 50, maxMs: 200 },
+    });
+    const first = event(CREATED);
+    await publish(bus, CREATED, first);
+    await until(
+      () => got,
+      (ids) => ids.includes(first.id),
+    );
+    expect(sub.running()).toBe(true);
+    expect(consumerRunning()[durable]).toBe(true);
+
+    await bus.jsm.consumers.delete(STREAM, durable);
+    await until(
+      () => sub.restarts(),
+      (n) => n >= 1,
+      30_000,
+    );
+    const next = event(CREATED);
+    await publish(bus, CREATED, next);
+    await until(
+      () => got,
+      (ids) => ids.includes(next.id),
+    );
+    expect(sub.running()).toBe(true);
+    expect(errors.some((m) => m.startsWith(`consumer ${durable}:`) && m.endsWith("restarting"))).toBe(true);
+    expect(restarts[0]).toBe(1);
+    expect(runningChanges.slice(0, 3)).toEqual([true, false, true]);
+    expect((await bus.jsm.consumers.info(STREAM, durable)).config.filter_subjects).toEqual([CREATED]);
+    await sub.stop();
+    expect(sub.running()).toBe(false);
+    expect(consumerRunning()[durable]).toBeUndefined();
+  });
+
+  it("keeps retrying while the stream is gone and resumes once it is back", async () => {
+    const stream = STREAMS.billing.name;
+    const subject = "evt.billing.invoice.paid";
+    const durable = "kit1-stream";
+    const got: string[] = [];
+    const sub = await subscribe(bus, {
+      stream,
+      durable,
+      filterSubjects: ["evt.billing.>"],
+      handler: async (e) => void got.push(e.id),
+      onDeadLetter: async () => {},
+      onError: () => {},
+      restartBackoff: { initialMs: 50, maxMs: 100 },
+      pullExpiresMs: 4_000,
+    });
+    await bus.jsm.streams.delete(stream); // a natsdata loss
+    await until(
+      () => sub.running(),
+      (r) => r === false,
+      30_000, // immediate when a pull is pending, else after two missed idle heartbeats (~10 s)
+    );
+    await new Promise((r) => setTimeout(r, 300)); // several failed restarts (stream not found)
+    expect(sub.running()).toBe(false);
+    await ensureStreams(bus, [STREAMS.billing]);
+    await until(
+      () => sub.running(),
+      (r) => r === true,
+    );
+    const e = { ...event(CREATED), subject };
+    await jetstream(bus.nc).publish(subject, JSON.stringify(e), { msgID: e.id });
+    await until(
+      () => got,
+      (ids) => ids.includes(e.id),
+    );
+    await sub.stop();
+  });
+
+  it("stop() during the restart back-off resolves promptly", async () => {
+    const durable = "kit1-stop";
+    const sub = await subscribe(bus, {
+      stream: STREAM,
+      durable,
+      filterSubjects: [CREATED],
+      handler: async () => {},
+      onDeadLetter: async () => {},
+      onError: () => {},
+      restartBackoff: { initialMs: 60_000, maxMs: 60_000 },
+    });
+    await bus.jsm.consumers.delete(STREAM, durable);
+    await until(
+      () => sub.running(),
+      (r) => r === false,
+      30_000,
+    );
+    const t0 = Date.now();
+    await sub.stop();
+    expect(Date.now() - t0).toBeLessThan(1_000);
+  });
+
+  it("beats while alive (even with nothing to consume) and goes silent while a handler hangs", async () => {
+    const durable = "kit1-heartbeat";
+    let beats = 0;
+    let release: () => void = () => {};
+    const hung = new Promise<void>((r) => {
+      release = r;
+    });
+    const target = event(CREATED);
+    let entered = false;
+    const sub = await subscribe(bus, {
+      stream: STREAM,
+      durable,
+      filterSubjects: [CREATED],
+      handler: async (e) => {
+        if (e.id !== target.id) return;
+        entered = true;
+        await hung;
+      },
+      onDeadLetter: async () => {},
+      heartbeat: { beat: () => void beats++, idle: () => {} },
+    });
+    await until(
+      () => consumerLag(bus, STREAM, durable),
+      (n) => n === 0,
+    );
+    const idleStart = beats;
+    await new Promise((r) => setTimeout(r, 2_200));
+    expect(beats - idleStart).toBeGreaterThanOrEqual(2);
+    await publish(bus, CREATED, target);
+    await until(
+      () => entered,
+      (v) => v,
+    );
+    const hungStart = beats;
+    await new Promise((r) => setTimeout(r, 2_200));
+    expect(beats).toBe(hungStart);
+    release();
+    await until(
+      () => beats,
+      (n) => n > hungStart,
+    );
+    await sub.stop();
+  });
+});
+
+describe("publish failures as the outbox relay classifies them (KIT-6)", () => {
+  it("an oversized payload is poison, a subject no stream takes is unroutable, a closed connection is transient", async () => {
+    const big = { ...event(CREATED), data: { object: { blob: "x".repeat(1_100_000) } } } as unknown as Envelope;
+    const tooLarge = await publish(bus, CREATED, big).catch((e: unknown) => e);
+    expect(tooLarge).toBeInstanceOf(Error);
+    expect(classifyPublishError(tooLarge)).toBe("poison");
+    const orphan = { ...event(CREATED), subject: "evt.nowhere.thing.happened" } as unknown as Envelope;
+    const noStream = await publish(bus, "evt.nowhere.thing.happened", orphan).catch((e: unknown) => e);
+    expect(noStream).toBeInstanceOf(Error);
+    expect(classifyPublishError(noStream)).toBe("unroutable");
+    const closed = await connectBus({ url: nats.url, name: "kit-closed" });
+    await closed.close();
+    const down = await publish(closed, CREATED, event(CREATED)).catch((e: unknown) => e);
+    expect(down).toBeInstanceOf(Error);
+    expect(classifyPublishError(down)).toBe("retry");
   });
 });

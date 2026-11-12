@@ -5,6 +5,7 @@
  */
 import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
+import { breakerStates } from "@nearpay-internal/http";
 import { Counter, collectDefaultMetrics, Gauge, Histogram, Registry } from "prom-client";
 
 export type { Registry };
@@ -18,6 +19,14 @@ export interface ExternalCallResult {
   ms: number;
 }
 
+/** One background loop's liveness, as the service reports it (KIT-4). */
+export interface BackgroundLoopSample {
+  /** Seconds since the loop's last beat. */
+  silentSeconds: number;
+  /** Active and silent for longer than its budget (`/healthz` fails). */
+  stalled: boolean;
+}
+
 export interface ServiceMetrics {
   readonly registry: Registry;
   readonly prefix: string;
@@ -29,6 +38,8 @@ export interface ServiceMetrics {
   collectConsumerLag(fn: Collect<Record<string, number>>): void;
   collectJobsDue(fn: Collect<Record<string, number>>): void;
   collectDeadLettersOpen(fn: Collect<number>): void;
+  /** `background_last_beat_seconds{task}` + `background_task_stalled{task}` (the service bootstrap sets this). */
+  collectBackground(fn: Collect<Record<string, BackgroundLoopSample>>): void;
   counter<L extends string>(name: string, help: string, labelNames?: readonly L[]): Counter<L>;
   gauge<L extends string>(
     name: string,
@@ -38,6 +49,15 @@ export interface ServiceMetrics {
   ): Gauge<L>;
   histogram<L extends string>(name: string, help: string, labelNames?: readonly L[], buckets?: number[]): Histogram<L>;
   render(): Promise<string>;
+}
+
+/** `@nearpay-internal/bus` keeps its supervised consumers in this process-wide registry (no NATS dependency here). */
+const BUS_CONSUMERS = Symbol.for("nearpay.kit.bus.consumers");
+function consumerRunning(): Record<string, boolean> {
+  const reg = (globalThis as { [BUS_CONSUMERS]?: Map<string, Set<{ running(): boolean }>> })[BUS_CONSUMERS];
+  const out: Record<string, boolean> = {};
+  for (const [durable, subs] of reg ?? []) if (subs.size) out[durable] = [...subs].some((s) => s.running());
+  return out;
 }
 
 const DURATION_BUCKETS = [0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10];
@@ -90,6 +110,7 @@ export function createMetrics(service: string, opts: { defaultMetrics?: boolean 
   let consumerLag: Collect<Record<string, number>> = () => ({});
   let jobsDue: Collect<Record<string, number>> = () => ({});
   let deadLetters: Collect<number> = () => 0;
+  let background: Collect<Record<string, BackgroundLoopSample>> = () => ({});
   const safe = async <T>(fn: Collect<T>, fallback: T): Promise<T> => {
     try {
       return await fn();
@@ -110,6 +131,31 @@ export function createMetrics(service: string, opts: { defaultMetrics?: boolean 
   gauge("jobs_due", "Jobs due now, per kind.", ["kind"], async (g) => setAll(g, "kind", await safe(jobsDue, {})));
   gauge("dead_letters_open", "Unresolved dead letters (-1 when unknown).", [], async (g) =>
     g.set(await safe(deadLetters, -1)),
+  );
+
+  // Liveness of background loops (KIT-4), breaker and consumer state (KIT-2, KIT-1): read from the process at scrape time.
+  gauge("background_last_beat_seconds", "Seconds since each background loop last beat.", ["task"], async (g) => {
+    const samples = await safe(background, {});
+    setAll(g, "task", Object.fromEntries(Object.entries(samples).map(([k, v]) => [k, v.silentSeconds])));
+  });
+  gauge(
+    "background_task_stalled",
+    "1 when a background loop is active and silent beyond its budget (/healthz fails).",
+    ["task"],
+    async (g) => {
+      const samples = await safe(background, {});
+      setAll(g, "task", Object.fromEntries(Object.entries(samples).map(([k, v]) => [k, v.stalled ? 1 : 0])));
+    },
+  );
+  gauge("http_breaker_open", "1 while an outbound circuit breaker is open or half-open, per target.", ["target"], (g) =>
+    setAll(
+      g,
+      "target",
+      Object.fromEntries(Object.entries(breakerStates()).map(([k, v]) => [k, v === "closed" ? 0 : 1])),
+    ),
+  );
+  gauge("consumer_running", "1 while a durable consumer's loop is consuming (0 while it restarts).", ["durable"], (g) =>
+    setAll(g, "durable", Object.fromEntries(Object.entries(consumerRunning()).map(([k, v]) => [k, v ? 1 : 0]))),
   );
 
   return {
@@ -134,6 +180,9 @@ export function createMetrics(service: string, opts: { defaultMetrics?: boolean 
     },
     collectDeadLettersOpen(fn) {
       deadLetters = fn;
+    },
+    collectBackground(fn) {
+      background = fn;
     },
     counter,
     gauge,
